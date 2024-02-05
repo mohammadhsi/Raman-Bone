@@ -23,6 +23,8 @@ function varargout = InitProcessImageGUI_revised(varargin)
 % hello github
 % Edit the above text to modify the response to help InitProcessImageGUI_revised
 
+% ajb says hello
+
 % Last Modified by GUIDE v2.5 20-Sep-2016 09:46:11
 
 % Begin initialization code - DO NOT EDIT
