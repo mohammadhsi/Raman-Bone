@@ -199,6 +199,8 @@ xpixeldrift = 6;
 ypixeldrift = 2;
 
 % Throughput Properties
+% 2024.02.06 ajb: for current system w/ 3 separate fiber bundles, it is
+% probably not necessary to identify each fiber separately anymore.
 fibernum = 40; % Number of fibers to use in fit
 thpeakstripwindow = 3;
 thedgedist = 4;
@@ -241,6 +243,7 @@ s = what(filedir); allfiles = s.mat;
 specind = logical(1 - ((1-cellfun('isempty', regexp(allfiles,'throughput'))) + ...
     (1-cellfun('isempty', regexp(allfiles,'neon'))) + ...
     (1-cellfun('isempty', regexp(allfiles,'tylenol'))) + ...
+    (1-cellfun('isempty', regexp(allfiles,'whitelamp'))) + ...
     (1-cellfun('isempty', regexp(allfiles,'darkspec')))));
 list = allfiles(specind);
 
