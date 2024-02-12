@@ -270,7 +270,7 @@ mxwindow = max(window);
 darkspec2(1:mxwindow,:) = darkspec(1:mxwindow,:); darkspec2((py-mxwindow+1):py,:) = darkspec((py-mxwindow+1):py,:);
 darkspec2(:,1:mxwindow) = darkspec(:,1:mxwindow); darkspec2(:,(px-mxwindow+1):px) = darkspec(:,(px-mxwindow+1):px);
 % figure; imagesc(darkspec); ct = caxis;
-%darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
+% darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
 % figure; imagesc(darkspec); caxis(ct);
 
 %% Determine Wavelength Calibration
@@ -293,8 +293,7 @@ neon = median(neon,3);
 
 %[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V1([],sum(neon,1).',npeaknum,10,300);
 
-% 2/1/2024 ---smh
-
+% 2/1/2024 ---SMH
 minPeakProminence = 0.01 * max(sum(neon,1).');
 minPeakHeight = 0.01 * max(sum(neon,1).');
 minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
@@ -357,6 +356,37 @@ npeakpixels = npeakpixels(ind); npeaklambda = npeaklambda(ind); npeakheight = np
 
 process.wavelength = polyval(polyfit(npeakpixels,npeaklambda,polyorderneon),1:size(neon,2)).';
 
+
+%% Load Whitelamp 
+%test for 
+whitelamp = load([filedir '/whitelamp.mat']);
+whitelamp = double(permute(reshape(whitelamp.RawData.Spectrum.',px,py, ...
+    str2double(whitelamp.RawData.NumofKin)),[3 2 1])./...
+    str2double(whitelamp.RawData.NumofAcu));
+if size(whitelamp,1) > 1
+    whitelampmad = squeeze(mad(whitelamp,1));
+else
+    whitelampmad = squeeze(zeros(size(whitelamp)));
+end
+whitelampmed = squeeze(median(whitelamp,1));
+whitelamp(whitelamp > permute(repmat(whitelampmed+10.*whitelampmad,[1 1 size(whitelamp,1)]),[3 1 2])) = nan;
+whitelamp(whitelamp < permute(repmat(whitelampmed-10.*whitelampmad,[1 1 size(whitelamp,1)]),[3 1 2])) = nan;
+if size(whitelamp,1) > 1
+    whitelamp = squeeze(nanmean(whitelamp));
+else
+    whitelamp = squeeze(whitelamp);
+end
+whitelamp = whitelamp-darkspec;
+
+% Calculate correction factor using white lamp 
+
+Row = 47;    % this is a bright row from frame 1 of white light
+RowLength = 256;
+WhiteFirstSpec =  double(OffsetWhiteSpec(Row,:));
+% create a smoothed version that has no ripples
+WindowSize = 200;
+ThroughputSmoothSpec = (smooth(double(ThroughputFirstSpec),WindowSize))';
+WhiteSmoothSpec = (smooth(double(WhiteFirstSpec),WindowSize))';
 %% Load Throughput
 throughput = load([filedir '/throughput.mat']);
 throughput = double(permute(reshape(throughput.RawData.Spectrum.',px,py, ...
@@ -367,6 +397,9 @@ if size(throughput,1) > 1
 else
     throughputmad = squeeze(zeros(size(throughput)));
 end
+
+% What are the squeeze and permute functions and what exactly they are
+% doing and why????
 throughputmed = squeeze(median(throughput,1));
 throughput(throughput > permute(repmat(throughputmed+10.*throughputmad,[1 1 size(throughput,1)]),[3 1 2])) = nan;
 throughput(throughput < permute(repmat(throughputmed-10.*throughputmad,[1 1 size(throughput,1)]),[3 1 2])) = nan;
@@ -391,25 +424,7 @@ ISRM = polyval(A,wavenumtemp);
 throughput = throughput./repmat(ISRM.',256,1);%change from 256 to 255  Keren
 
 
-%% Load Whitelamp 
-whitelamp = load([filedir '/whitelamp.mat']);
-whitelamp = double(permute(reshape(whitelamp.RawData.Spectrum.',px,py, ...
-    str2double(whitelamp.RawData.NumofKin)),[3 2 1])./...
-    str2double(whitelamp.RawData.NumofAcu));
-if size(whitelamp,1) > 1
-    whitelampmad = squeeze(mad(whitelamp,1));
-else
-    whitelampmad = squeeze(zeros(size(whitelamp)));
-end
-whitelampmed = squeeze(median(whitelamp,1));
-whitelamp(whitelamp > permute(repmat(whitelampmed+10.*whitelampmad,[1 1 size(whitelamp,1)]),[3 1 2])) = nan;
-whitelamp(whitelamp < permute(repmat(whitelampmed-10.*whitelampmad,[1 1 size(whitelamp,1)]),[3 1 2])) = nan;
-if size(whitelamp,1) > 1
-    whitelamp = squeeze(nanmean(whitelamp));
-else
-    whitelamp = squeeze(whitelamp);
-end
-whitelamp = whitelamp-darkspec;
+
 
 %% Determine Wavenumber Calibration
 set(handles.initprocessstatus,'string','Status: Determining Wavenumber Calibration...'); pause(1E-6)
@@ -446,7 +461,7 @@ typeakwavenumold= zeros(size(typeakwavenum));
 
 %[typeakwavelength1,typeakheight1] = ImprovedPeakLocations(process.wavelength,stylenol,typeaknum,10,1,1);
 
-
+% SMH ---- Januray 2024
 minPeakProminence = 0.0001 * max(sum(neon,1).');
 minPeakHeight = 0.0001 * max(sum(neon,1).');
 minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
@@ -731,7 +746,11 @@ if isempty(list) == 0
                     end
                     ZC_3(:,:,klm) = ZC_2; 
             
-                    
+                    % SMH ---- this is related to previous experimantal
+                    % setup which the fiber bundle was different shape. In
+                    % the new setup the fibers are separated and we no
+                    % longer need the information for individual fiber,
+                    % That's why we don't need this part of code.
                     %-----No longer extracting fiber spectra CM 12/11/2021
 %                     % Extract spectrum from each fiber
 %                     for jkl = 1:cpx
