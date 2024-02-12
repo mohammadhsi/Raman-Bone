@@ -392,21 +392,6 @@ A = [1.15596E-17 -9.77171E-14 2.16023E-10 -5.86762E-8 2.28325E-4 9.71937E-2]; % 
 wavenumtemp = (1./785-1./process.wavelength).*10.^7;
 ISRM = polyval(A,wavenumtemp);
 
-% break the throughput calibration into two separate parts:
-%  first for high-frequency fixed pattern, row by row if possible
-
-
-
-%  then for low-frequency spectral throughput, applied to all rows the same
-
-
-% old version did the two steps together with green glass, but we can't do 
-% that with the three-fiber-bundle approach because the GG only gives
-% significant signal at the 0 mm location -- ajb 2024.02.12
-
-% throughput = throughput./repmat(ISRM.',256,1);%change from 256 to 255  Keren
-
-
 %% Load Whitelamp 
 whitelamp = load([filedir '/whitelamp.mat']);
 whitelamp = double(permute(reshape(whitelamp.RawData.Spectrum.',px,py, ...
@@ -426,6 +411,28 @@ else
     whitelamp = squeeze(whitelamp);
 end
 whitelamp = whitelamp-darkspec;
+
+%% Calibration steps
+% break the throughput calibration into two separate parts:
+%  first for high-frequency fixed pattern, row by row if possible
+
+% start with full-frame white light data (with dark counts removed)
+% then make a smoothed version along each row
+% and then divide raw./smooth to get the high-frequency correction factor
+
+
+
+%  then for low-frequency spectral throughput, applied to all rows the same
+
+
+% old version did the two steps together with green glass, but we can't do 
+% that with the three-fiber-bundle approach because the GG only gives
+% significant signal at the 0 mm location -- ajb 2024.02.12
+
+% throughput = throughput./repmat(ISRM.',256,1);%change from 256 to 255  Keren
+
+
+
 
 %% Determine Wavenumber Calibration
 set(handles.initprocessstatus,'string','Status: Determining Wavenumber Calibration...'); pause(1E-6)
