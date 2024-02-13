@@ -244,6 +244,7 @@ specind = logical(1 - ((1-cellfun('isempty', regexp(allfiles,'throughput'))) + .
     (1-cellfun('isempty', regexp(allfiles,'darkspec')))));
 list = allfiles(specind);
 
+
 %% Load Dark Spectrum
 set(handles.initprocessstatus,'string','Status: Calculating Dark Spectrum...'); pause(1E-6)
 darkspec = load([filedir '/darkspec_cali.mat']);
@@ -315,7 +316,8 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
     axes(handles.previousstep); cla;
     %figure_handle = openfig('C:\Users\cmass\Documents\GradSchool\Lab Stuff\throughput_10192018\neon.fig'); % figure is opened
     %% make this not hardwired in the future....  - ajb 2023.10.27
-    figure_handle = openfig('C:\processingcode\Calibration\neon.fig'); % figure is opened
+    %figure_handle = openfig('C:\processingcode\Calibration\neon.fig'); % figure is opened
+    figure_handle = openfig('C:\Users\Mohammad\Box\GitHub\RamanProcessGUI\neon.fig'); % figure is opened
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure
     axes_children_handle = get(axes_handle, 'Children');
@@ -374,14 +376,37 @@ whitelamp(whitelamp < permute(repmat(whitelampmed-10.*whitelampmad,[1 1 size(whi
 if size(whitelamp,1) > 1
     whitelamp = squeeze(nanmean(whitelamp));
 else
-    whitelamp = squeeze(whitelamp);
+    whitelamp = squeeze(whitelamp); 
 end
 whitelamp = whitelamp-darkspec;
 
-% Calculate correction factor using white lamp 
+% Calculate correction factor using white lamp ----- SMH---- Feb. 12 2024
+% WhiteLampCF contains the correction factor for each row
 
-Row = 47;    % this is a bright row from frame 1 of white light
-RowLength = 256;
+RowLengthWL = size(whitelamp, 1); % Number of rows in the matrix
+ColLengthWL = size(whitelamp, 2); % Number of columns in the matrix
+
+% Preallocate the matrix to store correction factors for each row
+WhiteLampCF = zeros(RowLengthWL, ColLengthWL);
+
+% Window size for smoothing
+WindowSize = 200;
+
+% Loop through each row
+for Row = 1:RowLengthWL
+    % Extract the current row
+    WhiteSingleSpec = double(whitelamp(Row,:));
+    
+    % Create a smoothed version of the current row
+    WhiteSmoothedSpec = smooth(WhiteSingleSpec, WindowSize)';
+    
+    % Calculate the correction factor for the current row
+    CorrectionFactor = WhiteSingleSpec ./ WhiteSmoothedSpec;
+    
+    % Store the correction factor in the matrix
+    WhiteLampCF(Row, :) = CorrectionFactor;
+end
+
 %% Load Throughput
 throughput = load([filedir '/throughput.mat']);
 throughput = double(permute(reshape(throughput.RawData.Spectrum.',px,py, ...
@@ -412,11 +437,38 @@ throughput = throughput-darkspec;
 % throughput(115:256,308) = mean(throughput(115:256,[307 309]),2);
 % throughput(113,501) = mean(throughput(113,[500 502]),2);
 
+
+% Find the brightest row in green glass and then calcaulate coorection
+% factor using this row data ------SMH ---- Feb. 12/2024
+
+% Calculate the sum of each row
+rowSums = sum(throughput, 2); % The '2' indicates that we sum along the 2nd dimension (rows)
+
+% Find the row with the maximum sum
+[maxValue, brightestRow] = max(rowSums);
+
+% brightestRow now contains the index of the brightest row
+
+
+
+% Calculate correction factor using white lamp and correct for green glass ----- SMH---- Feb. 12/2024
+Row = 92;    % this is a bright row from of green glass
+RowLengthGG = 256;
+ThroughputSingleSpec =  double(throughput(Row,:));
+% create a smoothed version that has no ripples
+WindowSize = 200;
+ThroughputSmoothedSpec = (smooth(double(ThroughputSingleSpec),WindowSize))';
+
+% this is the correction vector
+CorrectionFactorGG = ThroughputSingleSpec./ThroughputSmoothedSpec;
+
+
 % See NIST ISRM 2241 certificate for polynomial coefficients
 A = [1.15596E-17 -9.77171E-14 2.16023E-10 -5.86762E-8 2.28325E-4 9.71937E-2]; % A5 A4 A3 A2 A1 A0
 wavenumtemp = (1./785-1./process.wavelength).*10.^7;
 ISRM = polyval(A,wavenumtemp);
 throughput = throughput./repmat(ISRM.',256,1);%change from 256 to 255  Keren
+
 
 
 
@@ -477,7 +529,8 @@ while(sum((typeakwavenumold==typeakwavenum) + floor((isnan(typeakwavenumold)+isn
     
     axes(handles.previousstep); cla;
     %% make this non-hardwired in the future - ajb 2023.10.27
-    figure_handle = openfig('C:\processingcode\Calibration\tylenol.fig'); % figure is opened
+    %figure_handle = openfig('C:\processingcode\Calibration\tylenol.fig'); % figure is opened
+    figure_handle = openfig('C:\Users\Mohammad\Box\GitHub\RamanProcessGUI\tylenol.fig'); % figure is opened
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure
     axes_children_handle = get(axes_handle, 'Children');
