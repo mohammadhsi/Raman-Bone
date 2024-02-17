@@ -318,24 +318,30 @@ windowSize = 2;
 NumberOfNeonPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 
 if length(npeaklambda) > length(npeakpixels)
-    % shorten the length of the npeaklambda vector to match the number that
-    % was provided in the V2 function
+    % shorten the length of the npeaklambda vector (what was expected) 
+    % to match the number that was actually found from the V2 function
     npeaklambda = npeaklambda(1:NumberOfNeonPeaksToLabel);
 end
 
-% create a vector for the number of peaks we are going to label
+% create a vector for the number of peaks we are going to label - as seen
+% just above, this can be a number less than that of the previous
+% calibration
 npeaklambdaold = zeros(NumberOfNeonPeaksToLabel,1);
 
-
-
 while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<NumberOfNeonPeaksToLabel)
+% this line checks whether the previous and current assignments match (I
+% haven't checked this fully, but it is working as I expected it to) - ajb
+% 2024.02.17
+
+    % assign 'lambdaold' to be the existing (old) list of peak assignments
+    % (truncated to elements 1:NumberOfNeonPeaksToLabel already)
     npeaklambdaold = npeaklambda;
-    
+
+    % set up plots
     axes(handles.currentstep); cla; plot(sum(neon,1).'); hold on;
     text(npeakpixels,npeakheight,num2str(npeaklambda),'rotation',90);
     axis tight; set(gca,'ytick',[]); box on;
-    ylabel('intensity / a.u.'); xlabel('pixel number');
-    
+    ylabel('intensity / a.u.'); xlabel('pixel number');    
     axes(handles.previousstep); cla;
 
     % find the neon.fig file wherever it is first found - use is 
@@ -344,7 +350,7 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
     figure_handle = openfig(neonfig); % figure is opened
 
     %figure_handle = openfig('C:\processingcode\Calibration\neon.fig');  %
-    %legacy
+    %  - just legacy
 
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure
@@ -359,11 +365,17 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
      
     name='Neon Spectrum';
     numlines=1;
-    defaultanswer={num2str(npeaklambda.')};
-    
-     cellans = inputdlg(prompt,name,numlines,defaultanswer);
-     npeaklambda=str2num(cellans{1}).';    
-    % Dwight Fairchild
+
+    % provide the value of what was done the last time - i.e. use lambdaold
+    defaultanswer={num2str(npeaklambdaold.')};
+    % defaultanswer={num2str(npeaklambda.')};
+
+    % now build a new npeaklambda by having the user type in values
+    cellans = inputdlg(prompt,name,numlines,defaultanswer);
+    % convert to numbers
+    npeaklambda=str2num(cellans{1}).';  % 
+       
+     % Dwight Fairchild
     % This while loop reprompts if the input matrix dimensions do not match
     % the sample's matrix dimensions
     while( ~isequal(size(npeaklambda) ,size(npeaklambdaold)));
@@ -374,11 +386,12 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
        defaultanswer={num2str(npeaklambda.')};
        
        cellans = inputdlg(prompt,name,numlines,defaultanswer);
-       npeaklambda=str2num(cellans{1}).';  
+       npeaklambda=str2num(cellans{1}).'; 
     end
    
    
-end
+end % of while loop 
+
 npeaklambda = npeaklambdaold;
 
 ind = logical(1-isnan(npeaklambda));
