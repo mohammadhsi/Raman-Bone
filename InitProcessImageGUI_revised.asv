@@ -320,16 +320,12 @@ NumberOfNeonPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 if length(npeaklambda) > length(npeakpixels)
     % shorten the length of the npeaklambda vector to match the number that
     % was provided in the V2 function
-    npeaklambda = np
+    npeaklambda = npeaklambda(1:NumberOfNeonPeaksToLabel);
+end
 
-
-
-    % create a vector for the number of peaks we are going to label
+% create a vector for the number of peaks we are going to label
 npeaklambdaold = zeros(NumberOfNeonPeaksToLabel,1);
 
-% if the detected peaks are fewer than the hardwired data, we need to make
-% sure the while loop stops at the right point
-if 
 
 
 while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<NumberOfNeonPeaksToLabel)
@@ -343,6 +339,10 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
     axes(handles.previousstep); cla;
     %figure_handle = openfig('C:\Users\cmass\Documents\GradSchool\Lab Stuff\throughput_10192018\neon.fig'); % figure is opened
     %% make this not hardwired in the future....  - ajb 2023.10.27
+    % let the first choice for the 'neon.fig' file be the present working directory
+    
+
+    
     figure_handle = openfig('C:\processingcode\Calibration\neon.fig'); % figure is opened
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure

@@ -337,9 +337,15 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
     ylabel('intensity / a.u.'); xlabel('pixel number');
     
     axes(handles.previousstep); cla;
-    %figure_handle = openfig('C:\Users\cmass\Documents\GradSchool\Lab Stuff\throughput_10192018\neon.fig'); % figure is opened
-    %% make this not hardwired in the future....  - ajb 2023.10.27
-    figure_handle = openfig('C:\processingcode\Calibration\neon.fig'); % figure is opened
+
+    % find the neon.fig file wherever it is first found - use is 
+    % responsible for it being in the pwd or else in the Matlab path
+    neonfig = which('neon.fig');
+    figure_handle = openfig(neonfig); % figure is opened
+
+    %figure_handle = openfig('C:\processingcode\Calibration\neon.fig');  %
+    %legacy
+
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure
     axes_children_handle = get(axes_handle, 'Children');
