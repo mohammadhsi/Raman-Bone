@@ -416,10 +416,13 @@ whitelamp = whitelamp-darkspec;
 % break the throughput calibration into two separate parts:
 %  first for high-frequency fixed pattern, row by row if possible
 
+
 % start with full-frame white light data (with dark counts removed)
 % then make a smoothed version along each row
 % and then divide raw./smooth to get the high-frequency correction factor
+% (this should be a horizontal line at 1, with ripples)
 
+FixedPattern = whitelamp ./ smooth(whitelamp(:,1))
 
 
 %  then for low-frequency spectral throughput, applied to all rows the same
