@@ -214,7 +214,7 @@ npeakstripwindow = 4;
 % npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
 % Created on January 26, 2024, using ImprovedRelativePeakLocations
 
-npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54];
+npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
 % Created on 2024.02.17
 
 % number of peaks calculated directly from the values above
