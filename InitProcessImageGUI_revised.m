@@ -457,26 +457,44 @@ else
 end
 whitelamp = whitelamp-darkspec;
 
-%% Calibration steps
-% break the throughput calibration into two separate parts:
-%  first for high-frequency fixed pattern, row by row if possible
+%% Detection system calibration steps
 
+% Break the throughput calibration into two separate parts: high-frequency
+% fixed pattern and broad spectral throughput. 
 
-% start with full-frame white light data (with dark counts removed)
-% then make a smoothed version along each row
-% and then divide raw./smooth to get the high-frequency correction factor
-% (this should be a horizontal line at 1, with ripples)
-
-FixedPattern = whitelamp ./ smooth(whitelamp(:,1))
-
-
-%  then for low-frequency spectral throughput, applied to all rows the same
-
-
-% old version did the two steps together with green glass, but we can't do 
+% The old version did the two steps together with green glass, but we can't do 
 % that with the three-fiber-bundle approach because the GG only gives
 % significant signal at the 0 mm location -- ajb 2024.02.12
 
+%%  Fixed pattern
+
+% If we were doing single-row fixed pattern correction, we would use the
+% following approach with a thermal lamp data to determine high-frequency
+% fixed pattern correction factors on a pixel-by-pixel level on each row:
+
+% FixedPattern = whitelamp ./ smooth(whitelamp(:,1))
+
+% We do see clear rippling for white light.  
+% But we have found that our 5-minute integrations for exposed and
+% transcutaneous bone measurements have significant shot noise relative to
+% the fixed pattern (which has ripple amplitude at the single row level of
+% +/- 2% at most).  So we cannot currently correct for fixed pattern at the
+% row level.  Sanity check: plot the same row for each of the five frames.
+% If FP-limited, they should overlap closely.  We do not see that.  - ajb
+
+% Following Christine
+% Massie's approach, we will instead sum over entire fiber legs.  This
+% requires us to do aberration correction first, so that the summing
+% doesn't blur out peaks (the raw image data has some curvature).  
+
+% As a result, there is no fixed pattern correction performed at the raw
+% level.  We will do aberration correction first on the full frame level,
+% followed by fixed pattern at the leg level and finally spectral
+% throughput correction with green glass fluorescence at the vector level
+% (same correction for all rows because the GG does not illuminate all
+% fibers in the current 3-bundle approach).  
+
+% legacy line:
 % throughput = throughput./repmat(ISRM.',256,1);%change from 256 to 255  Keren
 
 
