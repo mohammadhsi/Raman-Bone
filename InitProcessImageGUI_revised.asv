@@ -207,11 +207,14 @@ thedgedist = 4;
 
 % Neon Properties
 npeakstripwindow = 4;
-npeaknum = 22;
+
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 878.06 885.39 886.55 891.95 914.87 920.18 NaN 930.09 NaN 932.65 NaN 942.54 NaN NaN 953.42 954.74 966.54].';
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95	898.86 914.87 920.18 NaN NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54].';
 
 npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
+
+npeaknum = length(npeaklambda);
+
 % Created on January 26, 2024, using ImprovedRelativePeakLocations
 
 polyorderneon = 3;
@@ -220,7 +223,7 @@ polyorderneon = 3;
 % Tylenol Properties
 typeakstripwindow = 15;
 
-typeaknum = 21;
+
 
 %typeakwavenum = [NaN 329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4].';
 %typeakwavenum = [329.2 NaN NaN NaN NaN 390.9 NaN 465.1 651.6 797.2 857.9 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].';
@@ -229,6 +232,8 @@ typeaknum = 21;
 %typeakwavenum = [329.2 390.9 465.1 504 NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; %--Latest January 16
 
 typeakwavenum = [329.2          390.9          465.1       NaN  	NaN        651.6          710.8          797.2            NaN          857.9    NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].'; 
+
+typeaknum = 21;
 
 % created January 26, using ImprovedRelativePeakLocations
 
@@ -312,11 +317,22 @@ windowSize = 2;
 %   values have to be equal in order to make the calibration GUI code run
 NumberOfNeonPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 
-% if the detected peaks are fewer than the hardwired data, we need to 
+if length(npeaklambda) > length(npeakpixels)
+    % shorten the length of the npeaklambda vector to match the number that
+    % was provided in the V2 function
+    npeaklambda = np
 
 
-npeaklambdaold = zeros(size(NumberOfNeonPeaksToLabel));
-while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<npeaknum)
+
+    % create a vector for the number of peaks we are going to label
+npeaklambdaold = zeros(NumberOfNeonPeaksToLabel,1);
+
+% if the detected peaks are fewer than the hardwired data, we need to make
+% sure the while loop stops at the right point
+if 
+
+
+while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<NumberOfNeonPeaksToLabel)
     npeaklambdaold = npeaklambda;
     
     axes(handles.currentstep); cla; plot(sum(neon,1).'); hold on;

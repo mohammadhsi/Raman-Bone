@@ -317,13 +317,18 @@ windowSize = 2;
 %   values have to be equal in order to make the calibration GUI code run
 NumberOfNeonPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 
+if length(npeaklambda) > length(npeakpixels)
+    % shorten the length of the npeaklambda vector to match the number that
+    % was provided in the V2 function
+    npeaklambda = npeaklambda(1:NumberOfNeonPeaksToLabel);
+end
+
 % create a vector for the number of peaks we are going to label
 npeaklambdaold = zeros(NumberOfNeonPeaksToLabel,1);
 
-% if the detected peaks are fewer than the hardwired data, we need to make
-% sure the while loop stops at the right point
 
-while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<npeaknum)
+
+while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<NumberOfNeonPeaksToLabel)
     npeaklambdaold = npeaklambda;
     
     axes(handles.currentstep); cla; plot(sum(neon,1).'); hold on;
