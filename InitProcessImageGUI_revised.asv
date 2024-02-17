@@ -211,11 +211,16 @@ npeakstripwindow = 4;
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 878.06 885.39 886.55 891.95 914.87 920.18 NaN 930.09 NaN 932.65 NaN 942.54 NaN NaN 953.42 954.74 966.54].';
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95	898.86 914.87 920.18 NaN NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54].';
 
-npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
+% npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
+% Created on January 26, 2024, using ImprovedRelativePeakLocations
 
+npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54];
+% Created on 2024.02.17
+
+% number of peaks 
 npeaknum = length(npeaklambda);
 
-% Created on January 26, 2024, using ImprovedRelativePeakLocations
+
 
 polyorderneon = 3;
 
@@ -328,18 +333,14 @@ end
 % calibration
 npeaklambdaold = zeros(NumberOfNeonPeaksToLabel,1);
 
-% keep track of peaks to label
-NeonIndex = 0;
-
 while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<NumberOfNeonPeaksToLabel)
-    
-    % increment NeonIndex to find out what the while loop is doing
-    NeonIndex = NeonIndex + 1;
+% this line checks whether the previous and current assignments match (I
+% haven't checked this fully, but it is working as I expected it to) - ajb
+% 2024.02.17
 
     % assign 'lambdaold' to be the existing (old) list of peak assignments
     % (truncated to elements 1:NumberOfNeonPeaksToLabel already)
     npeaklambdaold = npeaklambda;
-    % we will next build a new npeaklambda by having the user type in values
 
     % set up plots
     axes(handles.currentstep); cla; plot(sum(neon,1).'); hold on;
@@ -374,11 +375,11 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
     defaultanswer={num2str(npeaklambdaold.')};
     % defaultanswer={num2str(npeaklambda.')};
 
+    % now build a new npeaklambda by having the user type in values
     cellans = inputdlg(prompt,name,numlines,defaultanswer);
-    
+    % convert to numbers
     npeaklambda=str2num(cellans{1}).';  % 
-   
-    
+       
      % Dwight Fairchild
     % This while loop reprompts if the input matrix dimensions do not match
     % the sample's matrix dimensions
@@ -390,11 +391,12 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
        defaultanswer={num2str(npeaklambda.')};
        
        cellans = inputdlg(prompt,name,numlines,defaultanswer);
-       npeaklambda=str2num(cellans{1}).';  % this seems to be the problematic line
+       npeaklambda=str2num(cellans{1}).'; 
     end
    
    
-end % of while loop (checking to make sure the l
+end % of while loop 
+
 npeaklambda = npeaklambdaold;
 
 ind = logical(1-isnan(npeaklambda));

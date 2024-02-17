@@ -211,11 +211,16 @@ npeakstripwindow = 4;
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 878.06 885.39 886.55 891.95 914.87 920.18 NaN 930.09 NaN 932.65 NaN 942.54 NaN NaN 953.42 954.74 966.54].';
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95	898.86 914.87 920.18 NaN NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54].';
 
-npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
+% npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
+% Created on January 26, 2024, using ImprovedRelativePeakLocations
 
+npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54];
+% Created on 2024.02.17
+
+% number of peaks calculated directly from the values above
 npeaknum = length(npeaklambda);
 
-% Created on January 26, 2024, using ImprovedRelativePeakLocations
+
 
 polyorderneon = 3;
 
@@ -312,13 +317,14 @@ windowSize = 2;
 % finding neon peaks
 [npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V2([], sum(neon,1).', npeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
 % function ..V2 reports the number of peaks and the corresponding heights
-%   if this returns fewer peaks than expect from the hardwired list of neon
-%   peaks, then set the expected number to be 'npeakpixels'; these two
-%   values have to be equal in order to make the calibration GUI code run
+%   if this returns a different number of peaks than expected from the 
+%   hardwired list of neon peaks, then set the expected number to be 
+%   'npeakpixels'; these two values have to be equal in order to make the 
+%   calibration GUI code run
 NumberOfNeonPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 
-if length(npeaklambda) > length(npeakpixels)
-    % shorten the length of the npeaklambda vector (what was expected) 
+if length(npeaklambda) ~= length(npeakpixels)
+    % change the length of the npeaklambda vector (what was expected) 
     % to match the number that was actually found from the V2 function
     npeaklambda = npeaklambda(1:NumberOfNeonPeaksToLabel);
 end
