@@ -304,14 +304,18 @@ minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
 threshold = 0.0001 * max(sum(neon,1).');
 windowSize = 2;
 
-% not sure if V2 is working; switching back to V1?
+% finding neon peaks
 [npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V2([], sum(neon,1).', npeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
 % function ..V2 reports the number of peaks and the corresponding heights
 %   if this returns fewer peaks than expect from the hardwired list of neon
 %   peaks, then set the expected number to be 'npeakpixels'; these two
 %   values have to be equal in order to make the calibration GUI code run
+NumberOfNeonPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 
-npeaklambdaold = zeros(size(npeaklambda));
+% if the detected peaks are fewer than the hardwired data, we need to 
+
+
+npeaklambdaold = zeros(size(NumberOfNeonPeaksToLabel));
 while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<npeaknum)
     npeaklambdaold = npeaklambda;
     
