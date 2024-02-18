@@ -614,31 +614,43 @@ process.wavenum = (1./process.laserwavelength - 1./process.wavelength)*10^7;
 %% Determine Aberration Correction
 set(handles.initprocessstatus,'string','Status: Determining Aberration Correction...'); pause(1E-6)
 % Correction along CCD height
-[idealycps,peakheight] = PeakLocationsJ([],sum(throughput,2),fibernum,thpeakstripwindow,thedgedist);
+
+% 2024.02.18 --ajb 
+% This should be done using illumination of the full CCD as
+% brightly as possible in order to get best data
+%   Using the 3 fiber bundles, it is *possible* to get 40 peaks detected,
+% but white light is better, as it lights up all fibers nearly equally.  
+[idealycps,peakheight] = PeakLocationsJ([],sum(whitelamp,2),fibernum,thpeakstripwindow,thedgedist);
+
+% [idealycps,peakheight] = PeakLocationsJ([],sum(throughput,2),fibernum,thpeakstripwindow,thedgedist);
 
 % 1/2/2024 ---smh
 %startsmh
-epsilon = 1e-3;
-offset_p = abs(min(min(sum(throughput,2)), 0)) + epsilon;  % epsilon can be a small value like 1e-3 to avoid zero values
-adjustedSpectrum = sum(throughput,2) + offset_p;
 
-minPeakProminence = 0.000000001 * max(sum(neon,1).');
-minPeakHeight = 0.000000001 * max(sum(neon,1).');
-minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
-%threshold = 0.0001 * max(sum(neon,1).');
-threshold = 0;
-windowSize = 2;
+% epsilon = 1e-3;
+% offset_p = abs(min(min(sum(throughput,2)), 0)) + epsilon;  % epsilon can be a small value like 1e-3 to avoid zero values
+% adjustedSpectrum = sum(throughput,2) + offset_p;
+% 
+% minPeakProminence = 0.000000001 * max(sum(neon,1).');
+% minPeakHeight = 0.000000001 * max(sum(neon,1).');
+% minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
+% %threshold = 0.0001 * max(sum(neon,1).');
+% threshold = 0;
+% windowSize = 2;
 
-[idealycps_smh,peakheight_smh] = ImprovedRelativePeakLocations_V2([],adjustedSpectrum, fibernum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
-
-[idealycps_smh2,peakheight_smh2] = ImprovedRelativePeakLocations_V1([],adjustedSpectrum,fibernum,2,minPeakProminence);
+% [idealycps_smh,peakheight_smh] = ImprovedRelativePeakLocations_V2([],adjustedSpectrum, fibernum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+% 
+% [idealycps_smh2,peakheight_smh2] = ImprovedRelativePeakLocations_V1([],adjustedSpectrum,fibernum,2,minPeakProminence);
 
 %endsmh
 
-ridealycps = round(idealycps);
+ridealycps = round(idealycps);  % this rounds to the nearest integer for the y-heights of the ideal stripes
 
 for ijk = 1:fibernum
-    [a,measuredycps(ijk,:)] = max(throughput( (-ypixeldrift:ypixeldrift) + ridealycps(ijk),:));
+    % use whitelamp because throughput (GG) doesn't light up all fibers
+    % strongly
+    [a,measuredycps(ijk,:)] = max(whitelamp( (-ypixeldrift:ypixeldrift) + ridealycps(ijk),:));
+%    [a,measuredycps(ijk,:)] = max(throughput( (-ypixeldrift:ypixeldrift) + ridealycps(ijk),:));
 end
 measuredycps = measuredycps+repmat(ridealycps,1,px)-(ypixeldrift+1);
 
