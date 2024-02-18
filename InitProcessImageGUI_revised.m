@@ -675,8 +675,11 @@ for ijk = 1:px
     Yi(:,ijk) = polyval(polyfit(idealycps,measuredycps(:,ijk),polyorderaberration),1:py);
 end
 
-% similarly, now calculate ideal x positions - this lines up the peaks of
-% all rows
+% Similarly, now calculate ideal x positions - this lines up the peaks of
+% all rows for calibrated peaks
+%   As with green glass, we no longer have equally strong stripes for
+%   tylenol.  It would be better to use neon to do the horizontal
+%   adjustments.  
 idealxcps = PeakLocationsJ([],stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
 ridealxcps = round(idealxcps);
 
@@ -693,7 +696,7 @@ for j=0:1:polyorderaberration
     polynom(:,j+1)=pixels.^j;
 end
 
-
+% plot data from tylenol now
 figure; imagesc(tylenol); colormap('gray'); hold on; 
 plot(measuredxcps.',1:py,'r','linewidth',1)
 [a,measuredxcps] = OLSJ(measuredxcps.',polynom); measuredxcps = measuredxcps.'; % replace with polyval and polyfit
