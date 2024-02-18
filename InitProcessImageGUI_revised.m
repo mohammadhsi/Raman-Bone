@@ -482,7 +482,7 @@ whitelamp = whitelamp-darkspec;
 % row level.  Sanity check: plot the same row for each of the five frames.
 % If FP-limited, they should overlap closely.  We do not see that.  - ajb
 
-% Following Christine
+% Following Christie
 % Massie's approach, we will instead sum over entire fiber legs.  This
 % requires us to do aberration correction first, so that the summing
 % doesn't blur out peaks (the raw image data has some curvature).  
@@ -555,8 +555,13 @@ while(sum((typeakwavenumold==typeakwavenum) + floor((isnan(typeakwavenumold)+isn
     ylabel('intensity / a.u.'); xlabel('wavelength / nm');
     
     axes(handles.previousstep); cla;
-    %% make this non-hardwired in the future - ajb 2023.10.27
-    figure_handle = openfig('C:\processingcode\Calibration\tylenol.fig'); % figure is opened
+    
+    %% tylenol figure
+    % find the tylenol.fig file wherever it is first found - user is 
+    % responsible for it being in the pwd or else in the Matlab path
+    tylenolfig = which('tylenol.fig');
+    figure_handle = openfig(tylenolfig); % figure is opened
+
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure
     axes_children_handle = get(axes_handle, 'Children');

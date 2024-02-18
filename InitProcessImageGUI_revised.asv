@@ -479,23 +479,22 @@ whitelamp = whitelamp-darkspec;
 % transcutaneous bone measurements have significant shot noise relative to
 % the fixed pattern (which has ripple amplitude at the single row level of
 % +/- 2% at most).  So we cannot currently correct for fixed pattern at the
-% row level.  Sanity check: plot the same row for
+% row level.  Sanity check: plot the same row for each of the five frames.
+% If FP-limited, they should overlap closely.  We do not see that.  - ajb
 
-
-
-%  then for low-frequency spectral throughput, apply to all rows the same
-
-
-
-
-% We have found that we cannot see the oscillatory fixed pattern effect in
-% our current bone images at the single row level.  Following Christine
-% Massie's approach, we are instead summing over entire fiber legs.  This
-% thus requires us to do aberration correction first, so that the summing
+% Following Christie
+% Massie's approach, we will instead sum over entire fiber legs.  This
+% requires us to do aberration correction first, so that the summing
 % doesn't blur out peaks (the raw image data has some curvature).  
 
-% We can 
+% As a result, there is no fixed pattern correction performed at the raw
+% level.  We will do aberration correction first on the full frame level,
+% followed by fixed pattern at the leg level and finally spectral
+% throughput correction with green glass fluorescence at the vector level
+% (same correction for all rows because the GG does not illuminate all
+% fibers in the current 3-bundle approach).  
 
+% legacy line:
 % throughput = throughput./repmat(ISRM.',256,1);%change from 256 to 255  Keren
 
 
@@ -556,8 +555,12 @@ while(sum((typeakwavenumold==typeakwavenum) + floor((isnan(typeakwavenumold)+isn
     ylabel('intensity / a.u.'); xlabel('wavelength / nm');
     
     axes(handles.previousstep); cla;
-    %% make this non-hardwired in the future - ajb 2023.10.27
-    figure_handle = openfig('C:\processingcode\Calibration\tylenol.fig'); % figure is opened
+    %% tylenol figure
+    % find the tylenol.fig file wherever it is first found - user is 
+    % responsible for it being in the pwd or else in the Matlab path
+    tyfig = which('neon.fig');
+    figure_handle = openfig(neonfig); % figure is opened
+
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure
     axes_children_handle = get(axes_handle, 'Children');
