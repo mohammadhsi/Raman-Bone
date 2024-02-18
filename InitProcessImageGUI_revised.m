@@ -673,9 +673,13 @@ polynom = zeros(length(pixels),polyorderaberration+1);
 for j=0:1:polyorderaberration
     polynom(:,j+1)=pixels.^j;
 end
-% figure; imagesc(tylenol); colormap('gray'); hold on; plot(measuredxcps.',1:255,'r','linewidth',1)
+
+
+figure; imagesc(tylenol); colormap('gray'); hold on; 
+plot(measuredxcps.',1:255,'r','linewidth',1)
 [a,measuredxcps] = OLSJ(measuredxcps.',polynom); measuredxcps = measuredxcps.'; % replace with polyval and polyfit
-% figure; imagesc(tylenol); colormap('gray'); hold on; plot(measuredxcps.',1:256,'r','linewidth',1)
+figure; imagesc(tylenol); colormap('gray'); hold on; 
+plot(measuredxcps.',1:256,'r','linewidth',1)
 
 for ijk = 1:py
     Xi(ijk,:) = polyval(polyfit(idealxcps,measuredxcps(:,ijk),polyorderaberration),1:px);
@@ -760,7 +764,7 @@ ISRM2 = ISRM(cpx1:cpx2);
 
 
 set(handles.initprocessstatus,'string','Status: Processing Data...'); pause(1E-6)
-if isempty(list) == 0
+if isempty(list) == 0  % i.e. if there are 1 or more files to process
     if isdir([filedir '/initprocess/']) == 0
         mkdir(filedir,'initprocess');
     end
@@ -785,10 +789,13 @@ if isempty(list) == 0
             process.spec = [];
             process.shotnoise = [];
             
-            if sum(RawData.Spectrum(:) == 65535) > 60% if more than one saturated pixel
-                process.saturated = 1;
-                disp([process.location ' image saturated!']);
-            else
+            % *** temporary override to get the neon image  *** 
+            % if sum(RawData.Spectrum(:) == 65535) > 60% if more than one saturated pixel
+            %     process.saturated = 1;
+            %     disp([process.location ' image saturated!']);
+            %else
+            if (1)
+                
                 process.saturated = 0;
                 Z = permute(reshape(RawData.Spectrum.',px,py,str2double(RawData.NumofKin)),[2 1 3]);%keren just a mark, I forgot why
                 clear RawData
@@ -804,7 +811,8 @@ if isempty(list) == 0
                 leg{3} = [96:252]; %6mm offset (26 fibers)
 %-----------manual set the rows for each leg CM 12/11/2021
 
-                for klm = 1:size(Z,3)
+                for klm = 1:size(Z,3)    % looping over the number of frames
+                    
 %                     % Remove bad pixels  %Keren
 %                     Z(82:256,185,klm) = mean(Z(82:256,[184 186],klm),2);
 %                     Z(115:256,308,klm) = mean(Z(115:256,[307 309],klm),2);
@@ -817,6 +825,11 @@ if isempty(list) == 0
                     ZC = ZCt(cpy1:cpy2,cpx1:cpx2); 
                     process.image(:,:,klm)=ZC;
                     
+                    % Past this point, I don't see any aberration
+                    % correction; there is only system throughput
+                    % correction (low and high frequency).  As such I have
+                    % to assume that the aberration correction has simply
+                    % not been applied to the data.
                     
                     for i = 1:size(leg,2)
                        
