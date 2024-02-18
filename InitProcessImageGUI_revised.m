@@ -206,7 +206,6 @@ thpeakstripwindow = 3;
 thedgedist = 4;
 
 % Neon Properties
-npeakstripwindow = 4;
 
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 878.06 885.39 886.55 891.95 914.87 920.18 NaN 930.09 NaN 932.65 NaN 942.54 NaN NaN 953.42 954.74 966.54].';
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95	898.86 914.87 920.18 NaN NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54].';
@@ -214,19 +213,19 @@ npeakstripwindow = 4;
 % npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
 % Created on January 26, 2024, using ImprovedRelativePeakLocations
 
+% current
 npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
 % Created on 2024.02.17
 
 % number of peaks calculated directly from the values above
 npeaknum = length(npeaklambda);
 
-
-
 polyorderneon = 3;
 
+npeakstripwindow = 4;
 
 % Tylenol Properties
-typeakstripwindow = 15;
+
 
 %typeakwavenum = [NaN 329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4].';
 %typeakwavenum = [329.2 NaN NaN NaN NaN 390.9 NaN 465.1 651.6 797.2 857.9 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].';
@@ -235,10 +234,10 @@ typeakstripwindow = 15;
 %typeakwavenum = [329.2 390.9 465.1 504 NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; %--Latest January 16
 
 typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
-typeaknum = length(typeakwavenum);
-
 % created January 26, using ImprovedRelativePeakLocations
 
+typeaknum = length(typeakwavenum);
+typeakstripwindow = 15;
 tyedgedist = 21;
 
 %% Get Files to Process
@@ -289,6 +288,11 @@ accum = str2double(neon.RawData.NumofAcu);
 neon = permute(reshape(neon.RawData.Spectrum.',px,py,str2double(neon.RawData.NumofKin)),[2 1 3]);
 neon = double(neon);
 neon = median(neon,3);
+% provide a summed version that is a vector; this will be used later on for
+% aberration correction, since neon (unlike tylenol) can provide roughly
+% equal light levels for all three fiber bundles -- ajb 2024.02.18
+sneon = sum(neon,1).';   
+
 % neon = neon-darkspec.*accum;   % -- darkspec removal not needed for this
 % task - ajb 2024.01.10
 
@@ -680,11 +684,17 @@ end
 %   As with green glass, we no longer have equally strong stripes for
 %   tylenol.  It would be better to use neon to do the horizontal
 %   adjustments.  
-idealxcps = PeakLocationsJ([],stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
+
+% for now, keep using PeakLocationsJ (could switch to Mohammad's V2 later)
+nedgedist = tyedgedist;   % neon has no peaks near the far edge; maybe a problem at near edge?
+
+idealxcps = PeakLocationsJ([],sneon,npeaknum,npeakstripwindow,tyedgedist,0,2);
+% idealxcps = PeakLocationsJ([],stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
 ridealxcps = round(idealxcps);
 
-for ijk = 1:typeaknum
-    [a,measuredxcps(ijk,:)] = max(tylenol(:, (-xpixeldrift:xpixeldrift) + ridealxcps(ijk)),[],2);
+%for ijk = 1:typeaknum
+for ijk = 1:npeaknum
+    [a,measuredxcps(ijk,:)] = max(neon(:, (-xpixeldrift:xpixeldrift) + ridealxcps(ijk)),[],2);
 end
 measuredxcps = measuredxcps+repmat(ridealxcps,1,py)-(xpixeldrift+1);
 
@@ -696,11 +706,13 @@ for j=0:1:polyorderaberration
     polynom(:,j+1)=pixels.^j;
 end
 
-% plot data from tylenol now
-figure; imagesc(tylenol); colormap('gray'); hold on; 
+% switching to using neon for x calibration
+% figure; imagesc(tylenol); colormap('gray'); hold on; 
+figure; imagesc(neon); colormap('gray'); hold on; 
 plot(measuredxcps.',1:py,'r','linewidth',1)
 [a,measuredxcps] = OLSJ(measuredxcps.',polynom); measuredxcps = measuredxcps.'; % replace with polyval and polyfit
-figure; imagesc(tylenol); colormap('gray'); hold on; 
+% figure; imagesc(tylenol); colormap('gray'); hold on; 
+figure; imagesc(neon); colormap('gray'); hold on; 
 plot(measuredxcps.',1:py,'r','linewidth',1)
 
 for ijk = 1:py
@@ -847,11 +859,8 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
                     ZC = ZCt(cpy1:cpy2,cpx1:cpx2); 
                     process.image(:,:,klm)=ZC;
                     
-                    % Past this point, I don't see any aberration
-                    % correction; there is only system throughput
-                    % correction (low and high frequency).  As such I have
-                    % to assume that the aberration correction has simply
-                    % not been applied to the data.
+
+                    %% apply fixed pattern and spectral throughput changes next...
                     
                     for i = 1:size(leg,2)
                        
