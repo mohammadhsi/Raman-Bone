@@ -228,21 +228,16 @@ polyorderneon = 3;
 % Tylenol Properties
 typeakstripwindow = 15;
 
-
-
 %typeakwavenum = [NaN 329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4].';
 %typeakwavenum = [329.2 NaN NaN NaN NaN 390.9 NaN 465.1 651.6 797.2 857.9 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].';
 %typeakwavenum = [329.2 390.9 465.1 651.6 710.8 797.2 857.9 NaN NaN NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 NaN 1561.6 NaN 1648.4 NaN].';
 
 %typeakwavenum = [329.2 390.9 465.1 504 NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; %--Latest January 16
 
-typeakwavenum = [329.2          390.9          465.1       NaN  	NaN        651.6          710.8          797.2            NaN          857.9    NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].'; 
-
-typeaknum = 21;
+typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
+typeaknum = length(typeakwavenum);
 
 % created January 26, using ImprovedRelativePeakLocations
-
-
 
 tyedgedist = 21;
 
@@ -306,6 +301,8 @@ neon = median(neon,3);
 
 %[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V1([],sum(neon,1).',npeaknum,10,300);
 
+
+%% settings to automatically label a reasonable number of neon peaks
 % 2/1/2024 ---smh
 
 minPeakProminence = 0.01 * max(sum(neon,1).');
@@ -535,7 +532,7 @@ typeakwavenumold= zeros(size(typeakwavenum));
 
 %[typeakwavelength1,typeakheight1] = ImprovedPeakLocations(process.wavelength,stylenol,typeaknum,10,1,1);
 
-
+%% settings to automatically lable a reasonable number of tylenol peaks
 minPeakProminence = 0.0001 * max(sum(neon,1).');
 minPeakHeight = 0.0001 * max(sum(neon,1).');
 minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
@@ -546,6 +543,20 @@ windowSize = 2;
 [typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V2(process.wavelength,stylenol, typeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
 %[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V1(process.wavelength,stylenol,typeaknum,10,300);
 
+% NumberOfTylenolPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
+
+% Figure out which is smaller: the number of peaks found by the ..V2 algorithm
+% above, or the number of peaks expected from the hardwired values at the
+% start 
+NumberOfTylenolPeaksToLabel = min( length(typeakwavelength), length(typeaknum) );
+
+if length(typeakpeakwavelength) ~= length(typeaknum)
+    % change the length of the typeaknum vector (what was expected) 
+    % to match the number that was actually found from the V2 function
+    npeaklambda = npeaklambda(1:NumberOfTylenolPeaksToLabel);
+end
+
+
 
 while(sum((typeakwavenumold==typeakwavenum) + floor((isnan(typeakwavenumold)+isnan(typeakwavenum))./2))<typeaknum)
     typeakwavenumold = typeakwavenum;
@@ -555,11 +566,12 @@ while(sum((typeakwavenumold==typeakwavenum) + floor((isnan(typeakwavenumold)+isn
     ylabel('intensity / a.u.'); xlabel('wavelength / nm');
     
     axes(handles.previousstep); cla;
+    
     %% tylenol figure
     % find the tylenol.fig file wherever it is first found - user is 
     % responsible for it being in the pwd or else in the Matlab path
-    tyfig = which('neon.fig');
-    figure_handle = openfig(neonfig); % figure is opened
+    tylenolfig = which('tylenol.fig');
+    figure_handle = openfig(tylenolfig); % figure is opened
 
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure

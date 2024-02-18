@@ -228,21 +228,16 @@ polyorderneon = 3;
 % Tylenol Properties
 typeakstripwindow = 15;
 
-
-
 %typeakwavenum = [NaN 329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4].';
 %typeakwavenum = [329.2 NaN NaN NaN NaN 390.9 NaN 465.1 651.6 797.2 857.9 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].';
 %typeakwavenum = [329.2 390.9 465.1 651.6 710.8 797.2 857.9 NaN NaN NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 NaN 1561.6 NaN 1648.4 NaN].';
 
 %typeakwavenum = [329.2 390.9 465.1 504 NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; %--Latest January 16
 
-typeakwavenum = [329.2          390.9          465.1       NaN  	NaN        651.6          710.8          797.2            NaN          857.9    NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].'; 
-
-typeaknum = 21;
+typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
+typeaknum = length(typeakwavenum);
 
 % created January 26, using ImprovedRelativePeakLocations
-
-
 
 tyedgedist = 21;
 
@@ -306,6 +301,8 @@ neon = median(neon,3);
 
 %[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V1([],sum(neon,1).',npeaknum,10,300);
 
+
+%% settings to automatically label a reasonable number of neon peaks
 % 2/1/2024 ---smh
 
 minPeakProminence = 0.01 * max(sum(neon,1).');
@@ -530,12 +527,12 @@ stylenol = stylenol-polyval(polyfit(pixels,stylenol,5),pixels);
 stylenol = stylenol - min(stylenol) + 1;
 
 %[typeakwavelength2,typeakheight2] = PeakLocationsJ(process.wavelength,stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
-size(typeakwavenum)
-typeakwavenumold= zeros(size(typeakwavenum));
+% size(typeakwavenum)
+% typeakwavenumold= zeros(size(typeakwavenum));
 
 %[typeakwavelength1,typeakheight1] = ImprovedPeakLocations(process.wavelength,stylenol,typeaknum,10,1,1);
 
-
+%% settings to automatically lable a reasonable number of tylenol peaks
 minPeakProminence = 0.0001 * max(sum(neon,1).');
 minPeakHeight = 0.0001 * max(sum(neon,1).');
 minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
@@ -546,6 +543,21 @@ windowSize = 2;
 [typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V2(process.wavelength,stylenol, typeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
 %[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V1(process.wavelength,stylenol,typeaknum,10,300);
 
+% NumberOfTylenolPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
+
+% Figure out which is smaller: the number of peaks found by the ..V2 algorithm
+% above, or the number of peaks expected from the hardwired values at the
+% start 
+NumberOfTylenolPeaksToLabel = min( length(typeakwavelength), length(typeakwavenum) );
+
+if length(typeakwavelength) ~= length(typeakwavenum)
+    % change the length of the typeakwavenum vector (what was expected) 
+    % to match the number that was actually found from the V2 function
+    typeakwavenum = typeakwavenum(1:NumberOfTylenolPeaksToLabel);
+end
+
+% define a vector to hold the hardwired wavenum values
+typeakwavenumold= zeros(size(typeakwavenum));
 
 while(sum((typeakwavenumold==typeakwavenum) + floor((isnan(typeakwavenumold)+isnan(typeakwavenum))./2))<typeaknum)
     typeakwavenumold = typeakwavenum;
