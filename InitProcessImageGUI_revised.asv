@@ -613,7 +613,10 @@ process.wavenum = (1./process.laserwavelength - 1./process.wavelength)*10^7;
 
 %% Determine Aberration Correction
 set(handles.initprocessstatus,'string','Status: Determining Aberration Correction...'); pause(1E-6)
-% Correction along CCD height
+
+
+%% Calculate y positions -- adjusts CCD columns so that the fiber stripes 
+% are horizontal
 
 % 2024.02.18 --ajb 
 % This should be done using illumination of the full CCD as
@@ -647,13 +650,16 @@ set(handles.initprocessstatus,'string','Status: Determining Aberration Correctio
 ridealycps = round(idealycps);  % this rounds to the nearest integer for the y-heights of the ideal stripes
 
 for ijk = 1:fibernum
-    % use whitelamp because throughput 
+    % use whitelamp because throughput (GG) doesn't light up all fibers
+    % strongly
     [a,measuredycps(ijk,:)] = max(whitelamp( (-ypixeldrift:ypixeldrift) + ridealycps(ijk),:));
 %    [a,measuredycps(ijk,:)] = max(throughput( (-ypixeldrift:ypixeldrift) + ridealycps(ijk),:));
 end
-measuredycps = measuredycps+repmat(ridealycps,1,px)-(ypixeldrift+1);
+    measuredycps = measuredycps+repmat(ridealycps,1,px)-(ypixeldrift+1);
 
-pixels = (1:px).'; pixels = (pixels-mean(pixels))./std(pixels);
+pixels = (1:px).'; pixels = (pixels-mean(pixels))./std(pixels); 
+% centered at 0; scaled to not be huge numbers when raised to powers
+
 % Initialize polynomial matrix
 polynom = zeros(length(pixels),polyorderaberration+1);
 % Values range from 1 to 2^order
@@ -669,6 +675,8 @@ for ijk = 1:px
     Yi(:,ijk) = polyval(polyfit(idealycps,measuredycps(:,ijk),polyorderaberration),1:py);
 end
 
+% similarly, now calculate ideal x positions - this lines up the peaks of
+% all rows
 idealxcps = PeakLocationsJ([],stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
 ridealxcps = round(idealxcps);
 
@@ -687,7 +695,7 @@ end
 
 
 figure; imagesc(tylenol); colormap('gray'); hold on; 
-plot(measuredxcps.',1:255,'r','linewidth',1)
+plot(measuredxcps.',1:px,'r','linewidth',1)
 [a,measuredxcps] = OLSJ(measuredxcps.',polynom); measuredxcps = measuredxcps.'; % replace with polyval and polyfit
 figure; imagesc(tylenol); colormap('gray'); hold on; 
 plot(measuredxcps.',1:256,'r','linewidth',1)
