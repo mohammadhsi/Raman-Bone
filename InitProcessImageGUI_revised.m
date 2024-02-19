@@ -708,12 +708,12 @@ end
 
 % switching to using neon for x calibration
 % figure; imagesc(tylenol); colormap('gray'); hold on; 
-figure; imagesc(neon); colormap('gray'); hold on; 
-plot(measuredxcps.',1:py,'r','linewidth',1)
+% figure; imagesc(neon); colormap('gray'); hold on; 
+% plot(measuredxcps.',1:py,'r','linewidth',1)
 [a,measuredxcps] = OLSJ(measuredxcps.',polynom); measuredxcps = measuredxcps.'; % replace with polyval and polyfit
 % figure; imagesc(tylenol); colormap('gray'); hold on; 
-figure; imagesc(neon); colormap('gray'); hold on; 
-plot(measuredxcps.',1:py,'r','linewidth',1)
+% figure; imagesc(neon); colormap('gray'); hold on; 
+% plot(measuredxcps.',1:py,'r','linewidth',1)
 
 for ijk = 1:py
     Xi(ijk,:) = polyval(polyfit(idealxcps,measuredxcps(:,ijk),polyorderaberration),1:px);
@@ -810,7 +810,7 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
     totiter = length(list);
     curriter = 1;
     tic
-    for ijk = 1:length(list) % For each spectral data file
+    for ijk = 1:length(list) % For each data file (i.e. a measurement)
         savefilename = [filedir '/initprocess/' list{ijk}];
         if exist(savefilename,'file')~=2
             % read data file
@@ -823,13 +823,11 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
             process.spec = [];
             process.shotnoise = [];
             
-            % *** temporary override to get the neon image  *** 
-            % if sum(RawData.Spectrum(:) == 65535) > 60% if more than one saturated pixel
-            %     process.saturated = 1;
-            %     disp([process.location ' image saturated!']);
-            %else
-            if (1)
-                
+            
+            if sum(RawData.Spectrum(:) == 65535) > 60  % if more than 60 saturated pixels, don't use the file
+                process.saturated = 1;
+                disp([process.location ' image saturated!']);
+            else  % this is the start of processing the file
                 process.saturated = 0;
                 Z = permute(reshape(RawData.Spectrum.',px,py,str2double(RawData.NumofKin)),[2 1 3]);%keren just a mark, I forgot why
                 clear RawData
@@ -840,46 +838,90 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
                 
 %-----------manual set the rows for each leg CM 12/11/2021 not doing
 %fiberbasis to get fiber spectrum
-                leg{1} = [67:95];  %0mm offset (4 fibers)              
-                leg{2} = [1:66];   %3mm offset (12 fibers)
-                leg{3} = [96:252]; %6mm offset (26 fibers)
+        leg{1} = [67:95];  %0mm offset (4 fibers)              
+        leg{2} = [1:66];   %3mm offset (12 fibers)
+        leg{3} = [96:252]; %6mm offset (26 fibers)
 %-----------manual set the rows for each leg CM 12/11/2021
 
-                for klm = 1:size(Z,3)    % looping over the number of frames
+        for klm = 1:size(Z,3)    % looping over the number of *frames* - typically 5 frames, stored separately?
                     
 %                     % Remove bad pixels  %Keren
 %                     Z(82:256,185,klm) = mean(Z(82:256,[184 186],klm),2);
 %                     Z(115:256,308,klm) = mean(Z(115:256,[307 309],klm),2);
 %                     Z(113,501,klm) = mean(Z(113,[500 502],klm),2);
                     
-                    % Aberration Correction
-                    ZCt = interp2(Z(:,:,klm),Xi,Yi,'spline');
-                    
-                    % Crop image
-                    ZC = ZCt(cpy1:cpy2,cpx1:cpx2); 
-                    process.image(:,:,klm)=ZC;
+        % Aberration Correction
+        ZCt = interp2(Z(:,:,klm),Xi,Yi,'spline');
+        
+        % Crop image
+        ZC = ZCt(cpy1:cpy2,cpx1:cpx2); 
+        process.image(:,:,klm)=ZC;
+        
+        % in the future: apply row-level correction first?
+
+
+        %% apply fixed pattern and spectral throughput changes next
+        SmoothNum = 50;  % used for both high and low freq; nothing magical about this value
+
+        ZeroMMLeg = 1;      % reminder in case one forgets which is first
+        % always use first leg for throughput correction; others don't have much signal
+        
+        SummedThroughput = (sum(throughput(leg{ZeroMMLeg},:)))';
+        SmoothedThroughput = smooth(SummedThroughput,SmoothNum);
+        Throughput_Multiplier = ISRM2./SmoothedThroughput;
+        
+        % loop over the three legs
+        for i = 1:size(leg,2)
+           
+        % Part 1: high-frequency fixed pattern correction
+        
+        % get whitelamp "ripple" function for this leg
+        whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
+        s = smooth(whitelamp_leg(:,i),SmoothNum); %CM
+       
+        % Being explicit: the FP term on the next line will be
+        % *multiplicative* upon data, hence the WL ripples are in
+        % the denominator term
+        FP_multiplier = s./whitelamp_leg(:,i);  
+        % Sanity check: FP_multiplier is a vector averaged at
+        % 1, with structure due to high-frequency fixed pattern
+
+        % calculate corresponding leg spectrum
+        ZC_leg(:,i) = sum(ZC(leg{i},:));
+        % apply FP correction to the corresponding summed data
+        ZC_leg_FP(:,i) = ZC_leg(:,i) .* FP_multiplier;
+
+        pause(0.1);
+
+        % Part 2: apply universal spectral throughput
+        % correction (same for all legs because the green glass
+        % only provides strong spectral data for the 0 mm leg)
+
+        % apply the throughput correction
+        ZC_leg_FP_thru(:,i) = ZC_leg_FP(:,i) .* Throughput_Multiplier;
+
+        % for tylenol at 0 mm at least, this seems to work!
                     
 
-                    %% apply fixed pattern and spectral throughput changes next...
-                    
-                    for i = 1:size(leg,2)
-                       
-                        throughput_leg(:,i) = sum(throughput(leg{i},:)); %get throughput leg CM 12/11/2021
-                        throughput_leg_s(:,i) = smooth(throughput_leg(:,i),100); %smooth to calculate spectral response CM 12/11/2021
-                        throughput_leg_s(:,i) = throughput_leg_s(:,i)./ISRM2; %calculate spectral response from smooth green glass and NIST standard CM 12/11/2021
-                        
-                        ZC_leg(:,i) = sum(ZC(leg{i},:)); %get data leg CM 12/11/2021
-                        ZC_leg_thru(:,i) = ZC_leg(:,i)./throughput_leg_s(:,i);  %correct for spectral throughput CM 12/11/2021
-                        
-                        whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
-                        s = smooth(whitelamp_leg(:,i),50); %CM
-                        fp = whitelamp_leg(:,i)./s; %low pass filter to get fixed pattern CM 12/11/2021
+                        % throughput_leg(:,i) = sum(throughput(leg{i},:)); %get throughput leg CM 12/11/2021
+                        % throughput_leg_s(:,i) = smooth(throughput_leg(:,i),100); %smooth to calculate spectral response CM 12/11/2021
+                        % throughput_leg_s(:,i) = throughput_leg_s(:,i)./ISRM2; %calculate spectral response from smooth green glass and NIST standard CM 12/11/2021
+                        % 
+                        % ZC_leg(:,i) = sum(ZC(leg{i},:)); %get data leg CM 12/11/2021
+                        % ZC_leg_thru(:,i) = ZC_leg(:,i)./throughput_leg_s(:,i);  %correct for spectral throughput CM 12/11/2021
+                        % 
+                        % whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
+                        % s = smooth(whitelamp_leg(:,i),50); %CM
+                        % fp = whitelamp_leg(:,i)./s; %low pass filter to get fixed pattern CM 12/11/2021
 %                         
                         
-                        ZC_2(:,i) = ZC_leg_thru(:,i)./(fp); %
+                        % ZC_2(:,i) = ZC_leg_thru(:,i)./(fp); %
                         %ZC_2(:,i) = ZC_leg_thru(:,i); 
-                    end
-                    ZC_3(:,:,klm) = ZC_2; 
+        
+        end % of loop over legs
+        
+        % this becomes the data for the klm-th experimental measurement
+        ZC_3(:,:,klm) = ZC_leg_FP_thru; 
             
                     
                     %-----No longer extracting fiber spectra CM 12/11/2021
@@ -909,7 +951,7 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
 %                     process.spec(:,:,klm) = process.spec(:,:,klm).*meansig;
 %                     process.shotnoise(:,:,klm) = process.shotnoise(:,:,klm)./normfac.*meansig;
                 end
-                process.spec = ZC_3;
+            process.spec = ZC_3;
             end
             
             % Save Data
