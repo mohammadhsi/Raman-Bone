@@ -20,8 +20,10 @@ function varargout = InitProcessImageGUI_revised(varargin)
 %      instance to run (singleton)".
 %
 % See also: GUIDE, GUIDATA, GUIHANDLES
-
+% hello github
 % Edit the above text to modify the response to help InitProcessImageGUI_revised
+
+% ajb says hello
 
 % Last Modified by GUIDE v2.5 20-Sep-2016 09:46:11
 
@@ -197,26 +199,33 @@ xpixeldrift = 6;
 ypixeldrift = 2;
 
 % Throughput Properties
+% 2024.02.06 ajb: for current system w/ 3 separate fiber bundles, it is
+% probably not necessary to identify each fiber separately anymore.
 fibernum = 40; % Number of fibers to use in fit
 thpeakstripwindow = 3;
 thedgedist = 4;
 
 % Neon Properties
-npeakstripwindow = 4;
-npeaknum = 22;
+
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 878.06 885.39 886.55 891.95 914.87 920.18 NaN 930.09 NaN 932.65 NaN 942.54 NaN NaN 953.42 954.74 966.54].';
 %npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95	898.86 914.87 920.18 NaN NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54].';
 
-npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
+% npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
 % Created on January 26, 2024, using ImprovedRelativePeakLocations
+
+% current
+npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
+% Created on 2024.02.17
+
+% number of peaks calculated directly from the values above
+npeaknum = length(npeaklambda);
 
 polyorderneon = 3;
 
+npeakstripwindow = 4;
 
 % Tylenol Properties
-typeakstripwindow = 15;
 
-typeaknum = 21;
 
 %typeakwavenum = [NaN 329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4].';
 %typeakwavenum = [329.2 NaN NaN NaN NaN 390.9 NaN 465.1 651.6 797.2 857.9 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].';
@@ -224,12 +233,11 @@ typeaknum = 21;
 
 %typeakwavenum = [329.2 390.9 465.1 504 NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; %--Latest January 16
 
-typeakwavenum = [329.2          390.9          465.1       NaN  	NaN        651.6          710.8          797.2            NaN          857.9    NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].'; 
-
+typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
 % created January 26, using ImprovedRelativePeakLocations
 
-
-
+typeaknum = length(typeakwavenum);
+typeakstripwindow = 15;
 tyedgedist = 21;
 
 %% Get Files to Process
@@ -239,6 +247,7 @@ s = what(filedir); allfiles = s.mat;
 specind = logical(1 - ((1-cellfun('isempty', regexp(allfiles,'throughput'))) + ...
     (1-cellfun('isempty', regexp(allfiles,'neon'))) + ...
     (1-cellfun('isempty', regexp(allfiles,'tylenol'))) + ...
+    (1-cellfun('isempty', regexp(allfiles,'whitelamp'))) + ...
     (1-cellfun('isempty', regexp(allfiles,'darkspec')))));
 list = allfiles(specind);
 
@@ -279,6 +288,11 @@ accum = str2double(neon.RawData.NumofAcu);
 neon = permute(reshape(neon.RawData.Spectrum.',px,py,str2double(neon.RawData.NumofKin)),[2 1 3]);
 neon = double(neon);
 neon = median(neon,3);
+% provide a summed version that is a vector; this will be used later on for
+% aberration correction, since neon (unlike tylenol) can provide roughly
+% equal light levels for all three fiber bundles -- ajb 2024.02.18
+sneon = sum(neon,1).';   
+
 % neon = neon-darkspec.*accum;   % -- darkspec removal not needed for this
 % task - ajb 2024.01.10
 
@@ -291,6 +305,8 @@ neon = median(neon,3);
 
 %[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V1([],sum(neon,1).',npeaknum,10,300);
 
+
+%% settings to automatically label a reasonable number of neon peaks
 % 2/1/2024 ---smh
 
 minPeakProminence = 0.01 * max(sum(neon,1).');
@@ -299,22 +315,50 @@ minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
 threshold = 0.0001 * max(sum(neon,1).');
 windowSize = 2;
 
+% finding neon peaks
 [npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V2([], sum(neon,1).', npeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+% function ..V2 reports the number of peaks and the corresponding heights
+%   if this returns a different number of peaks than expected from the 
+%   hardwired list of neon peaks, then set the expected number to be 
+%   'npeakpixels'; these two values have to be equal in order to make the 
+%   calibration GUI code run
+NumberOfNeonPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 
+if length(npeaklambda) ~= length(npeakpixels)
+    % change the length of the npeaklambda vector (what was expected) 
+    % to match the number that was actually found from the V2 function
+    npeaklambda = npeaklambda(1:NumberOfNeonPeaksToLabel);
+end
 
-npeaklambdaold = zeros(size(npeaklambda));
-while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<npeaknum)
+% create a vector for the number of peaks we are going to label - as seen
+% just above, this can be a number less than that of the previous
+% calibration
+npeaklambdaold = zeros(NumberOfNeonPeaksToLabel,1);
+
+while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npeaklambda))./2))<NumberOfNeonPeaksToLabel)
+% this line checks whether the previous and current assignments match (I
+% haven't checked this fully, but it is working as I expected it to) - ajb
+% 2024.02.17
+
+    % assign 'lambdaold' to be the existing (old) list of peak assignments
+    % (truncated to elements 1:NumberOfNeonPeaksToLabel already)
     npeaklambdaold = npeaklambda;
-    
+
+    % set up plots
     axes(handles.currentstep); cla; plot(sum(neon,1).'); hold on;
     text(npeakpixels,npeakheight,num2str(npeaklambda),'rotation',90);
     axis tight; set(gca,'ytick',[]); box on;
-    ylabel('intensity / a.u.'); xlabel('pixel number');
-    
+    ylabel('intensity / a.u.'); xlabel('pixel number');    
     axes(handles.previousstep); cla;
-    %figure_handle = openfig('C:\Users\cmass\Documents\GradSchool\Lab Stuff\throughput_10192018\neon.fig'); % figure is opened
-    %% make this not hardwired in the future....  - ajb 2023.10.27
-    figure_handle = openfig('C:\processingcode\Calibration\neon.fig'); % figure is opened
+
+    % find the neon.fig file wherever it is first found - use is 
+    % responsible for it being in the pwd or else in the Matlab path
+    neonfig = which('neon.fig');
+    figure_handle = openfig(neonfig); % figure is opened
+
+    %figure_handle = openfig('C:\processingcode\Calibration\neon.fig');  %
+    %  - just legacy
+
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure
     axes_children_handle = get(axes_handle, 'Children');
@@ -328,11 +372,17 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
      
     name='Neon Spectrum';
     numlines=1;
-    defaultanswer={num2str(npeaklambda.')};
-    
-     cellans = inputdlg(prompt,name,numlines,defaultanswer);
-     npeaklambda=str2num(cellans{1}).';    
-    % Dwight Fairchild
+
+    % provide the value of what was done the last time - i.e. use lambdaold
+    defaultanswer={num2str(npeaklambdaold.')};
+    % defaultanswer={num2str(npeaklambda.')};
+
+    % now build a new npeaklambda by having the user type in values
+    cellans = inputdlg(prompt,name,numlines,defaultanswer);
+    % convert to numbers
+    npeaklambda=str2num(cellans{1}).';  % 
+       
+     % Dwight Fairchild
     % This while loop reprompts if the input matrix dimensions do not match
     % the sample's matrix dimensions
     while( ~isequal(size(npeaklambda) ,size(npeaklambdaold)));
@@ -343,11 +393,12 @@ while(sum((npeaklambdaold==npeaklambda) + floor((isnan(npeaklambdaold)+isnan(npe
        defaultanswer={num2str(npeaklambda.')};
        
        cellans = inputdlg(prompt,name,numlines,defaultanswer);
-       npeaklambda=str2num(cellans{1}).';  
+       npeaklambda=str2num(cellans{1}).'; 
     end
    
    
-end
+end % of while loop 
+
 npeaklambda = npeaklambdaold;
 
 ind = logical(1-isnan(npeaklambda));
@@ -386,8 +437,6 @@ throughput = throughput-darkspec;
 A = [1.15596E-17 -9.77171E-14 2.16023E-10 -5.86762E-8 2.28325E-4 9.71937E-2]; % A5 A4 A3 A2 A1 A0
 wavenumtemp = (1./785-1./process.wavelength).*10.^7;
 ISRM = polyval(A,wavenumtemp);
-throughput = throughput./repmat(ISRM.',256,1);%change from 256 to 255  Keren
-
 
 %% Load Whitelamp 
 whitelamp = load([filedir '/whitelamp.mat']);
@@ -408,6 +457,49 @@ else
     whitelamp = squeeze(whitelamp);
 end
 whitelamp = whitelamp-darkspec;
+
+%% Detection system calibration steps
+
+% Break the throughput calibration into two separate parts: high-frequency
+% fixed pattern and broad spectral throughput. 
+
+% The old version did the two steps together with green glass, but we can't do 
+% that with the three-fiber-bundle approach because the GG only gives
+% significant signal at the 0 mm location -- ajb 2024.02.12
+
+%%  Fixed pattern
+
+% If we were doing single-row fixed pattern correction, we would use the
+% following approach with a thermal lamp data to determine high-frequency
+% fixed pattern correction factors on a pixel-by-pixel level on each row:
+
+% FixedPattern = whitelamp ./ smooth(whitelamp(:,1))
+
+% We do see clear rippling for white light.  
+% But we have found that our 5-minute integrations for exposed and
+% transcutaneous bone measurements have significant shot noise relative to
+% the fixed pattern (which has ripple amplitude at the single row level of
+% +/- 2% at most).  So we cannot currently correct for fixed pattern at the
+% row level.  Sanity check: plot the same row for each of the five frames.
+% If FP-limited, they should overlap closely.  We do not see that.  - ajb
+
+% Following Christie
+% Massie's approach, we will instead sum over entire fiber legs.  This
+% requires us to do aberration correction first, so that the summing
+% doesn't blur out peaks (the raw image data has some curvature).  
+
+% As a result, there is no fixed pattern correction performed at the raw
+% level.  We will do aberration correction first on the full frame level,
+% followed by fixed pattern at the leg level and finally spectral
+% throughput correction with green glass fluorescence at the vector level
+% (same correction for all rows because the GG does not illuminate all
+% fibers in the current 3-bundle approach).  
+
+% legacy line:
+% throughput = throughput./repmat(ISRM.',256,1);%change from 256 to 255  Keren
+
+
+
 
 %% Determine Wavenumber Calibration
 set(handles.initprocessstatus,'string','Status: Determining Wavenumber Calibration...'); pause(1E-6)
@@ -439,12 +531,12 @@ stylenol = stylenol-polyval(polyfit(pixels,stylenol,5),pixels);
 stylenol = stylenol - min(stylenol) + 1;
 
 %[typeakwavelength2,typeakheight2] = PeakLocationsJ(process.wavelength,stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
-size(typeakwavenum)
-typeakwavenumold= zeros(size(typeakwavenum));
+% size(typeakwavenum)
+% typeakwavenumold= zeros(size(typeakwavenum));
 
 %[typeakwavelength1,typeakheight1] = ImprovedPeakLocations(process.wavelength,stylenol,typeaknum,10,1,1);
 
-
+%% settings to automatically lable a reasonable number of tylenol peaks
 minPeakProminence = 0.0001 * max(sum(neon,1).');
 minPeakHeight = 0.0001 * max(sum(neon,1).');
 minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
@@ -455,6 +547,21 @@ windowSize = 2;
 [typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V2(process.wavelength,stylenol, typeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
 %[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V1(process.wavelength,stylenol,typeaknum,10,300);
 
+% NumberOfTylenolPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
+
+% Figure out which is smaller: the number of peaks found by the ..V2 algorithm
+% above, or the number of peaks expected from the hardwired values at the
+% start 
+NumberOfTylenolPeaksToLabel = min( length(typeakwavelength), length(typeakwavenum) );
+
+if length(typeakwavelength) ~= length(typeakwavenum)
+    % change the length of the typeakwavenum vector (what was expected) 
+    % to match the number that was actually found from the V2 function
+    typeakwavenum = typeakwavenum(1:NumberOfTylenolPeaksToLabel);
+end
+
+% define a vector to hold the hardwired wavenum values
+typeakwavenumold= zeros(size(typeakwavenum));
 
 while(sum((typeakwavenumold==typeakwavenum) + floor((isnan(typeakwavenumold)+isnan(typeakwavenum))./2))<typeaknum)
     typeakwavenumold = typeakwavenum;
@@ -464,8 +571,13 @@ while(sum((typeakwavenumold==typeakwavenum) + floor((isnan(typeakwavenumold)+isn
     ylabel('intensity / a.u.'); xlabel('wavelength / nm');
     
     axes(handles.previousstep); cla;
-    %% make this non-hardwired in the future - ajb 2023.10.27
-    figure_handle = openfig('C:\processingcode\Calibration\tylenol.fig'); % figure is opened
+    
+    %% tylenol figure
+    % find the tylenol.fig file wherever it is first found - user is 
+    % responsible for it being in the pwd or else in the Matlab path
+    tylenolfig = which('tylenol.fig');
+    figure_handle = openfig(tylenolfig); % figure is opened
+
     %%
     axes_handle = findobj(figure_handle, 'Type', 'Axes'); % find handle to axes in figure
     axes_children_handle = get(axes_handle, 'Children');
@@ -505,36 +617,53 @@ process.wavenum = (1./process.laserwavelength - 1./process.wavelength)*10^7;
 
 %% Determine Aberration Correction
 set(handles.initprocessstatus,'string','Status: Determining Aberration Correction...'); pause(1E-6)
-% Correction along CCD height
-[idealycps,peakheight] = PeakLocationsJ([],sum(throughput,2),fibernum,thpeakstripwindow,thedgedist);
+
+
+%% Calculate y positions -- adjusts CCD columns so that the fiber stripes 
+% are horizontal
+
+% 2024.02.18 --ajb 
+% This should be done using illumination of the full CCD as
+% brightly as possible in order to get best data
+%   Using the 3 fiber bundles, it is *possible* to get 40 peaks detected,
+% but white light is better, as it lights up all fibers nearly equally.  
+[idealycps,peakheight] = PeakLocationsJ([],sum(whitelamp,2),fibernum,thpeakstripwindow,thedgedist);
+
+% [idealycps,peakheight] = PeakLocationsJ([],sum(throughput,2),fibernum,thpeakstripwindow,thedgedist);
 
 % 1/2/2024 ---smh
 %startsmh
-epsilon = 1e-3;
-offset_p = abs(min(min(sum(throughput,2)), 0)) + epsilon;  % epsilon can be a small value like 1e-3 to avoid zero values
-adjustedSpectrum = sum(throughput,2) + offset_p;
 
-minPeakProminence = 0.000000001 * max(sum(neon,1).');
-minPeakHeight = 0.000000001 * max(sum(neon,1).');
-minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
-%threshold = 0.0001 * max(sum(neon,1).');
-threshold = 0;
-windowSize = 2;
+% epsilon = 1e-3;
+% offset_p = abs(min(min(sum(throughput,2)), 0)) + epsilon;  % epsilon can be a small value like 1e-3 to avoid zero values
+% adjustedSpectrum = sum(throughput,2) + offset_p;
+% 
+% minPeakProminence = 0.000000001 * max(sum(neon,1).');
+% minPeakHeight = 0.000000001 * max(sum(neon,1).');
+% minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
+% %threshold = 0.0001 * max(sum(neon,1).');
+% threshold = 0;
+% windowSize = 2;
 
-[idealycps_smh,peakheight_smh] = ImprovedRelativePeakLocations_V2([],adjustedSpectrum, fibernum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
-
-[idealycps_smh2,peakheight_smh2] = ImprovedRelativePeakLocations_V1([],adjustedSpectrum,fibernum,2,minPeakProminence);
+% [idealycps_smh,peakheight_smh] = ImprovedRelativePeakLocations_V2([],adjustedSpectrum, fibernum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+% 
+% [idealycps_smh2,peakheight_smh2] = ImprovedRelativePeakLocations_V1([],adjustedSpectrum,fibernum,2,minPeakProminence);
 
 %endsmh
 
-ridealycps = round(idealycps);
+ridealycps = round(idealycps);  % this rounds to the nearest integer for the y-heights of the ideal stripes
 
 for ijk = 1:fibernum
-    [a,measuredycps(ijk,:)] = max(throughput( (-ypixeldrift:ypixeldrift) + ridealycps(ijk),:));
+    % use whitelamp because throughput (GG) doesn't light up all fibers
+    % strongly
+    [a,measuredycps(ijk,:)] = max(whitelamp( (-ypixeldrift:ypixeldrift) + ridealycps(ijk),:));
+%    [a,measuredycps(ijk,:)] = max(throughput( (-ypixeldrift:ypixeldrift) + ridealycps(ijk),:));
 end
-measuredycps = measuredycps+repmat(ridealycps,1,px)-(ypixeldrift+1);
+    measuredycps = measuredycps+repmat(ridealycps,1,px)-(ypixeldrift+1);
 
-pixels = (1:px).'; pixels = (pixels-mean(pixels))./std(pixels);
+pixels = (1:px).'; pixels = (pixels-mean(pixels))./std(pixels); 
+% centered at 0; scaled to not be huge numbers when raised to powers
+
 % Initialize polynomial matrix
 polynom = zeros(length(pixels),polyorderaberration+1);
 % Values range from 1 to 2^order
@@ -550,11 +679,22 @@ for ijk = 1:px
     Yi(:,ijk) = polyval(polyfit(idealycps,measuredycps(:,ijk),polyorderaberration),1:py);
 end
 
-idealxcps = PeakLocationsJ([],stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
+% Similarly, now calculate ideal x positions - this lines up the peaks of
+% all rows for calibrated peaks
+%   As with green glass, we no longer have equally strong stripes for
+%   tylenol.  It would be better to use neon to do the horizontal
+%   adjustments.  
+
+% for now, keep using PeakLocationsJ (could switch to Mohammad's V2 later)
+nedgedist = tyedgedist;   % neon has no peaks near the far edge; maybe a problem at near edge?
+
+idealxcps = PeakLocationsJ([],sneon,npeaknum,npeakstripwindow,tyedgedist,0,2);
+% idealxcps = PeakLocationsJ([],stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
 ridealxcps = round(idealxcps);
 
-for ijk = 1:typeaknum
-    [a,measuredxcps(ijk,:)] = max(tylenol(:, (-xpixeldrift:xpixeldrift) + ridealxcps(ijk)),[],2);
+%for ijk = 1:typeaknum
+for ijk = 1:npeaknum
+    [a,measuredxcps(ijk,:)] = max(neon(:, (-xpixeldrift:xpixeldrift) + ridealxcps(ijk)),[],2);
 end
 measuredxcps = measuredxcps+repmat(ridealxcps,1,py)-(xpixeldrift+1);
 
@@ -565,9 +705,15 @@ polynom = zeros(length(pixels),polyorderaberration+1);
 for j=0:1:polyorderaberration
     polynom(:,j+1)=pixels.^j;
 end
-% figure; imagesc(tylenol); colormap('gray'); hold on; plot(measuredxcps.',1:255,'r','linewidth',1)
+
+% switching to using neon for x calibration
+% figure; imagesc(tylenol); colormap('gray'); hold on; 
+% figure; imagesc(neon); colormap('gray'); hold on; 
+% plot(measuredxcps.',1:py,'r','linewidth',1)
 [a,measuredxcps] = OLSJ(measuredxcps.',polynom); measuredxcps = measuredxcps.'; % replace with polyval and polyfit
-% figure; imagesc(tylenol); colormap('gray'); hold on; plot(measuredxcps.',1:256,'r','linewidth',1)
+% figure; imagesc(tylenol); colormap('gray'); hold on; 
+% figure; imagesc(neon); colormap('gray'); hold on; 
+% plot(measuredxcps.',1:py,'r','linewidth',1)
 
 for ijk = 1:py
     Xi(ijk,:) = polyval(polyfit(idealxcps,measuredxcps(:,ijk),polyorderaberration),1:px);
@@ -652,7 +798,7 @@ ISRM2 = ISRM(cpx1:cpx2);
 
 
 set(handles.initprocessstatus,'string','Status: Processing Data...'); pause(1E-6)
-if isempty(list) == 0
+if isempty(list) == 0  % i.e. if there are 1 or more files to process
     if isdir([filedir '/initprocess/']) == 0
         mkdir(filedir,'initprocess');
     end
@@ -664,7 +810,7 @@ if isempty(list) == 0
     totiter = length(list);
     curriter = 1;
     tic
-    for ijk = 1:length(list) % For each spectral data file
+    for ijk = 1:length(list) % For each data file (i.e. a measurement)
         savefilename = [filedir '/initprocess/' list{ijk}];
         if exist(savefilename,'file')~=2
             % read data file
@@ -677,10 +823,11 @@ if isempty(list) == 0
             process.spec = [];
             process.shotnoise = [];
             
-            if sum(RawData.Spectrum(:) == 65535) > 60% if more than one saturated pixel
+            
+            if sum(RawData.Spectrum(:) == 65535) > 60  % if more than 60 saturated pixels, don't use the file
                 process.saturated = 1;
                 disp([process.location ' image saturated!']);
-            else
+            else  % this is the start of processing the file
                 process.saturated = 0;
                 Z = permute(reshape(RawData.Spectrum.',px,py,str2double(RawData.NumofKin)),[2 1 3]);%keren just a mark, I forgot why
                 clear RawData
@@ -691,43 +838,90 @@ if isempty(list) == 0
                 
 %-----------manual set the rows for each leg CM 12/11/2021 not doing
 %fiberbasis to get fiber spectrum
-                leg{1} = [67:95];  %0mm offset (4 fibers)              
-                leg{2} = [1:66];   %3mm offset (12 fibers)
-                leg{3} = [96:252]; %6mm offset (26 fibers)
+        leg{1} = [67:95];  %0mm offset (4 fibers)              
+        leg{2} = [1:66];   %3mm offset (12 fibers)
+        leg{3} = [96:252]; %6mm offset (26 fibers)
 %-----------manual set the rows for each leg CM 12/11/2021
 
-                for klm = 1:size(Z,3)
+        for klm = 1:size(Z,3)    % looping over the number of *frames* - typically 5 frames, stored separately?
+                    
 %                     % Remove bad pixels  %Keren
 %                     Z(82:256,185,klm) = mean(Z(82:256,[184 186],klm),2);
 %                     Z(115:256,308,klm) = mean(Z(115:256,[307 309],klm),2);
 %                     Z(113,501,klm) = mean(Z(113,[500 502],klm),2);
                     
-                    % Aberration Correction
-                    ZCt = interp2(Z(:,:,klm),Xi,Yi,'spline');
+        % Aberration Correction
+        ZCt = interp2(Z(:,:,klm),Xi,Yi,'spline');
+        
+        % Crop image
+        ZC = ZCt(cpy1:cpy2,cpx1:cpx2); 
+        process.image(:,:,klm)=ZC;
+        
+        % in the future: apply row-level correction first?
+
+
+        %% apply fixed pattern and spectral throughput changes next
+        SmoothNum = 50;  % used for both high and low freq; nothing magical about this value
+
+        ZeroMMLeg = 1;      % reminder in case one forgets which is first
+        % always use first leg for throughput correction; others don't have much signal
+        
+        SummedThroughput = (sum(throughput(leg{ZeroMMLeg},:)))';
+        SmoothedThroughput = smooth(SummedThroughput,SmoothNum);
+        Throughput_Multiplier = ISRM2./SmoothedThroughput;
+        
+        % loop over the three legs
+        for i = 1:size(leg,2)
+           
+        % Part 1: high-frequency fixed pattern correction
+        
+        % get whitelamp "ripple" function for this leg
+        whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
+        s = smooth(whitelamp_leg(:,i),SmoothNum); %CM
+       
+        % Being explicit: the FP term on the next line will be
+        % *multiplicative* upon data, hence the WL ripples are in
+        % the denominator term
+        FP_multiplier = s./whitelamp_leg(:,i);  
+        % Sanity check: FP_multiplier is a vector averaged at
+        % 1, with structure due to high-frequency fixed pattern
+
+        % calculate corresponding leg spectrum
+        ZC_leg(:,i) = sum(ZC(leg{i},:));
+        % apply FP correction to the corresponding summed data
+        ZC_leg_FP(:,i) = ZC_leg(:,i) .* FP_multiplier;
+
+        pause(0.1);
+
+        % Part 2: apply universal spectral throughput
+        % correction (same for all legs because the green glass
+        % only provides strong spectral data for the 0 mm leg)
+
+        % apply the throughput correction
+        ZC_leg_FP_thru(:,i) = ZC_leg_FP(:,i) .* Throughput_Multiplier;
+
+        % for tylenol at 0 mm at least, this seems to work!
                     
-                    % Crop image
-                    ZC = ZCt(cpy1:cpy2,cpx1:cpx2); 
-                    process.image(:,:,klm)=ZC;
-                    
-                    
-                    for i = 1:size(leg,2)
-                       
-                        throughput_leg(:,i) = sum(throughput(leg{i},:)); %get throughput leg CM 12/11/2021
-                        throughput_leg_s(:,i) = smooth(throughput_leg(:,i),100); %smooth to calculate spectral response CM 12/11/2021
-                        throughput_leg_s(:,i) = throughput_leg_s(:,i)./ISRM2; %calculate spectral response from smooth green glass and NIST standard CM 12/11/2021
-                        
-                        ZC_leg(:,i) = sum(ZC(leg{i},:)); %get data leg CM 12/11/2021
-                        ZC_leg_thru(:,i) = ZC_leg(:,i)./throughput_leg_s(:,i);  %correct for spectral throughput CM 12/11/2021
-                        
-                        whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
-                        s = smooth(whitelamp_leg(:,i),50); %CM
-                        fp = whitelamp_leg(:,i)./s; %low pass filter to get fixed pattern CM 12/11/2021
+
+                        % throughput_leg(:,i) = sum(throughput(leg{i},:)); %get throughput leg CM 12/11/2021
+                        % throughput_leg_s(:,i) = smooth(throughput_leg(:,i),100); %smooth to calculate spectral response CM 12/11/2021
+                        % throughput_leg_s(:,i) = throughput_leg_s(:,i)./ISRM2; %calculate spectral response from smooth green glass and NIST standard CM 12/11/2021
+                        % 
+                        % ZC_leg(:,i) = sum(ZC(leg{i},:)); %get data leg CM 12/11/2021
+                        % ZC_leg_thru(:,i) = ZC_leg(:,i)./throughput_leg_s(:,i);  %correct for spectral throughput CM 12/11/2021
+                        % 
+                        % whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
+                        % s = smooth(whitelamp_leg(:,i),50); %CM
+                        % fp = whitelamp_leg(:,i)./s; %low pass filter to get fixed pattern CM 12/11/2021
 %                         
                         
-                        ZC_2(:,i) = ZC_leg_thru(:,i)./(fp); %
+                        % ZC_2(:,i) = ZC_leg_thru(:,i)./(fp); %
                         %ZC_2(:,i) = ZC_leg_thru(:,i); 
-                    end
-                    ZC_3(:,:,klm) = ZC_2; 
+        
+        end % of loop over legs
+        
+        % this becomes the data for the klm-th experimental measurement
+        ZC_3(:,:,klm) = ZC_leg_FP_thru; 
             
                     
                     %-----No longer extracting fiber spectra CM 12/11/2021
@@ -757,7 +951,7 @@ if isempty(list) == 0
 %                     process.spec(:,:,klm) = process.spec(:,:,klm).*meansig;
 %                     process.shotnoise(:,:,klm) = process.shotnoise(:,:,klm)./normfac.*meansig;
                 end
-                process.spec = ZC_3;
+            process.spec = ZC_3;
             end
             
             % Save Data
