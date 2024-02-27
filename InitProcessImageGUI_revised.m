@@ -1161,9 +1161,14 @@ s = what(process.filedirectory ); process.list = s.mat;
 [process.list] = sort_nat(process.list).';
 
 % Wavenumber regions
+
+% the extra-large wavenumber values (i.e. overflow for the polynomial fit)
 c1 = str2double(get(handles.c1,'string')); c2 = str2double(get(handles.c2,'string'));
+% the spectral wavenumber values desired
 c1t = str2double(get(handles.c1t,'string')); c2t = str2double(get(handles.c2t,'string'));
+% optional spectral range for normalization (we haven't been using it)
 c1n = str2double(get(handles.c1n,'string')); c2n = str2double(get(handles.c2n,'string'));
+% read all of these into 'process'
 process.processoptions.c1 = c1; process.processoptions.c2 = c2;
 process.processoptions.c1t = c1t; process.processoptions.c2t = c2t;
 process.wavenum = (process.processoptions.c1:2:process.processoptions.c2).';
@@ -1183,9 +1188,13 @@ else
     addlb = addlb.basis;
 end
 
+% fill out other 'process' values
 process.processoptions.polyorder = str2double(get(handles.bkgdpolyorder,'string'));
 process.processoptions.iter = str2double(get(handles.iter,'string'));
 %process.processoptions.iter = 100; %CM 4/19
+
+% cosmic ray value using mean absolute deviation
+%  (ajb: not sure what this term means without further diving)
 process.processoptions.crrmad = str2double(get(handles.crrmad,'string'));
 process.processoptions.convergepercent = str2double(get(handles.convergepercent,'string'));
 process.processoptions.peakremovalflag = get(handles.peakremovalflag,'value');
@@ -1277,6 +1286,7 @@ for jkl = 1:size(process.list,2)
 %             process.processoptions.noisefac, ...
 %             process.shotnoise{jkl});
         
+            % anita processing
             [process.anitaspec{jkl}] = IanitaJ(process.wavenum, ...
             process.spec{jkl},process.processoptions.polyorder, ...
             c1,c2,process.processoptions.iter,addlb, ...
@@ -1315,6 +1325,7 @@ end
 clearvars -except handles process c1 c2 c1t c2t addlb
 
 % Calculate mean spectrum and shotnoise
+
 process.meanspec = cell2mat(cellfun(@mean,process.spec, ...
     num2cell(ones(size(process.spec)).*2),'uniformoutput',0));
 
