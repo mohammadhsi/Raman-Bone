@@ -1,4 +1,4 @@
-function [peakIndices, peakHeights] = ImprovedRelativePeakLocations(xaxis, spectrum, peaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold)
+function [peakIndices, peakHeights] = ImprovedRelativePeakLocations_V2(xaxis, spectrum, peaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold)
 
     % ImprovedRelativePeakLocations: Function to find local maxima based on relative heights
     % xaxis: The x-axis values of the spectrum
