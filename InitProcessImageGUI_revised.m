@@ -213,9 +213,18 @@ thedgedist = 4;
 % npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
 % Created on January 26, 2024, using ImprovedRelativePeakLocations
 
-% current
-npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
-% Created on 2024.02.17
+% % Created on 2024.02.17
+%npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
+
+% April 3 2024
+%npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42    954.74        966.54]';
+
+%July 15, 2024
+%npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39        886.55        891.95        914.87        920.18        NaN        930.09        NaN        932.65        NaN        942.54        NaN        953.42        954.74        966.54]';
+
+%Using February 26 calibration data on May 29 data, updated on July 19
+npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        898.86        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42        966.54]';
+
 
 % number of peaks calculated directly from the values above
 npeaknum = length(npeaklambda);
@@ -316,7 +325,10 @@ threshold = 0.0001 * max(sum(neon,1).');
 windowSize = 2;
 
 % finding neon peaks
-[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V2([], sum(neon,1).', npeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+%[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V2([], sum(neon,1).', npeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+
+% V2 was complicated and not efficient, so replaced by V1
+[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V1([],sum(neon,1).',npeaknum,windowSize,minPeakProminence);
 % function ..V2 reports the number of peaks and the corresponding heights
 %   if this returns a different number of peaks than expected from the 
 %   hardwired list of neon peaks, then set the expected number to be 
@@ -537,15 +549,15 @@ stylenol = stylenol - min(stylenol) + 1;
 %[typeakwavelength1,typeakheight1] = ImprovedPeakLocations(process.wavelength,stylenol,typeaknum,10,1,1);
 
 %% settings to automatically lable a reasonable number of tylenol peaks
-minPeakProminence = 0.0001 * max(sum(neon,1).');
-minPeakHeight = 0.0001 * max(sum(neon,1).');
+minPeakProminence = 0.01 * max(stylenol);
+minPeakHeight = 0.00001 * max(stylenol);
 minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
-%threshold = 0.0001 * max(sum(neon,1).');
+%threshold = 0.000001 * max(stylenol);
 threshold = 0;
 windowSize = 2;
 
-[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V2(process.wavelength,stylenol, typeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
-%[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V1(process.wavelength,stylenol,typeaknum,10,300);
+%[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V2(process.wavelength,stylenol, typeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V1(process.wavelength,stylenol,typeaknum,windowSize,minPeakProminence);
 
 % NumberOfTylenolPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 
