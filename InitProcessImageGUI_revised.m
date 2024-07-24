@@ -213,9 +213,20 @@ thedgedist = 4;
 % npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
 % Created on January 26, 2024, using ImprovedRelativePeakLocations
 
-% current
-npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
-% Created on 2024.02.17
+
+% % Created on 2024.02.17
+%npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
+
+% April 3 2024
+%npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42    954.74        966.54]';
+
+%July 15, 2024
+%npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39        886.55        891.95        914.87        920.18        NaN        930.09        NaN        932.65        NaN        942.54        NaN        953.42        954.74        966.54]';
+
+%Using February 26 calibration data on May 29 data, updated on July 19
+npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        898.86        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42        966.54]';
+
+
 
 % number of peaks calculated directly from the values above
 npeaknum = length(npeaklambda);
@@ -316,7 +327,12 @@ threshold = 0.0001 * max(sum(neon,1).');
 windowSize = 2;
 
 % finding neon peaks
-[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V2([], sum(neon,1).', npeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+
+%[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V2([], sum(neon,1).', npeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+
+% V2 was complicated and not efficient, so replaced by V1
+[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V1([],sum(neon,1).',npeaknum,windowSize,minPeakProminence);
+
 % function ..V2 reports the number of peaks and the corresponding heights
 %   if this returns a different number of peaks than expected from the 
 %   hardwired list of neon peaks, then set the expected number to be 
@@ -537,17 +553,19 @@ stylenol = stylenol - min(stylenol) + 1;
 %[typeakwavelength1,typeakheight1] = ImprovedPeakLocations(process.wavelength,stylenol,typeaknum,10,1,1);
 
 %% settings to automatically lable a reasonable number of tylenol peaks
-minPeakProminence = 0.0001 * max(sum(neon,1).');
-minPeakHeight = 0.0001 * max(sum(neon,1).');
+% taken from Gamma-AJB-B
+minPeakProminence = 0.01 * max(stylenol);
+minPeakHeight = 0.00001 * max(stylenol);
 minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
-%threshold = 0.0001 * max(sum(neon,1).');
+%threshold = 0.000001 * max(stylenol);
 threshold = 0;
 windowSize = 2;
 
-[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V2(process.wavelength,stylenol, typeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
-%[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V1(process.wavelength,stylenol,typeaknum,10,300);
+%[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V2(process.wavelength,stylenol, typeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V1(process.wavelength,stylenol,typeaknum,windowSize,minPeakProminence);
 
 % NumberOfTylenolPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
+
 
 % Figure out which is smaller: the number of peaks found by the ..V2 algorithm
 % above, or the number of peaks expected from the hardwired values at the
@@ -1161,9 +1179,14 @@ s = what(process.filedirectory ); process.list = s.mat;
 [process.list] = sort_nat(process.list).';
 
 % Wavenumber regions
+
+% the extra-large wavenumber values (i.e. overflow for the polynomial fit)
 c1 = str2double(get(handles.c1,'string')); c2 = str2double(get(handles.c2,'string'));
+% the spectral wavenumber values desired
 c1t = str2double(get(handles.c1t,'string')); c2t = str2double(get(handles.c2t,'string'));
+% optional spectral range for normalization (we haven't been using it)
 c1n = str2double(get(handles.c1n,'string')); c2n = str2double(get(handles.c2n,'string'));
+% read all of these into 'process'
 process.processoptions.c1 = c1; process.processoptions.c2 = c2;
 process.processoptions.c1t = c1t; process.processoptions.c2t = c2t;
 process.wavenum = (process.processoptions.c1:2:process.processoptions.c2).';
@@ -1183,9 +1206,13 @@ else
     addlb = addlb.basis;
 end
 
+% fill out other 'process' values
 process.processoptions.polyorder = str2double(get(handles.bkgdpolyorder,'string'));
 process.processoptions.iter = str2double(get(handles.iter,'string'));
 %process.processoptions.iter = 100; %CM 4/19
+
+% cosmic ray value using mean absolute deviation
+%  (ajb: not sure what this term means without further diving)
 process.processoptions.crrmad = str2double(get(handles.crrmad,'string'));
 process.processoptions.convergepercent = str2double(get(handles.convergepercent,'string'));
 process.processoptions.peakremovalflag = get(handles.peakremovalflag,'value');
@@ -1277,6 +1304,7 @@ for jkl = 1:size(process.list,2)
 %             process.processoptions.noisefac, ...
 %             process.shotnoise{jkl});
         
+            % anita processing
             [process.anitaspec{jkl}] = IanitaJ(process.wavenum, ...
             process.spec{jkl},process.processoptions.polyorder, ...
             c1,c2,process.processoptions.iter,addlb, ...
@@ -1315,6 +1343,7 @@ end
 clearvars -except handles process c1 c2 c1t c2t addlb
 
 % Calculate mean spectrum and shotnoise
+
 process.meanspec = cell2mat(cellfun(@mean,process.spec, ...
     num2cell(ones(size(process.spec)).*2),'uniformoutput',0));
 
