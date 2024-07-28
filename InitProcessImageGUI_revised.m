@@ -282,14 +282,32 @@ list = allfiles(specind);
 
 %% Load Dark Spectrum
 set(handles.initprocessstatus,'string','Status: Calculating Dark Spectrum...'); pause(1E-6)
+
+% the file darkspec_calib.mat (which for a long time has simply been a copy
+% of darkspec.mat), when initially loaded, is the raw measurement acquired,
+% which is a 2D matrix (all frames are stored as a single image, which in
+% the case of 5 frames gives dimension of 1280x1024).
 darkspec = load([filedir '/darkspec_cali.mat']);
+% This next line turns the data into a 3D matrix, giving each of the 
+% frames its own, smaller matrix - for a 5-frame acquisition, the output
+% matrix is now 5x256x1024.
 darkspec = squeeze(double(permute(reshape(darkspec.RawData.Spectrum.',px,py, ...
     str2double(darkspec.RawData.NumofKin)),[3 2 1])./...
     str2double(darkspec.RawData.NumofAcu)));
+% "mad" is "mean absolute deviation", acting along the first dimension,
+% which is the number of frames -- this produce essentially a 2D matrix,
+% but the first (frame) dimension still exists even though the index only
+% goes to 1.
+% Using "squeeze" eliminates this dimension, producing a truly 2D matrix.
 darkspecmad = squeeze(mad(darkspec,1));
 darkspecmed = squeeze(median(darkspec,1));
+
+% 2024.07.28, AJB: 
+% It looks like this is rejecting values that exceed a certain distance from
+% the median (darkspecmed), setting them to nan.
 darkspec(darkspec > permute(repmat(darkspecmed+5.*darkspecmad,[1 1 size(darkspec,1)]),[3 1 2])) = nan;
 darkspec(darkspec < permute(repmat(darkspecmed-5.*darkspecmad,[1 1 size(darkspec,1)]),[3 1 2])) = nan;
+% "nanmean" simply takes a mean that ignores NaN values.
 darkspec = squeeze(nanmean(darkspec));
 
 % Remove bad pixels%%%Keren: we do not have bad pixels on new CCD
@@ -299,12 +317,20 @@ darkspec = squeeze(nanmean(darkspec));
 % darkspec(113,501) = mean(darkspec(113,[500 502]),2);
 
 % Filter Dark Spectrum
+% (the window and winsig values are at the start of the 'options' section
+% above)
 gausskernel = exp(-(window.^2)./(2.*winsig.^2));
 gausskernel = gausskernel./sum(gausskernel(:));
+% smooth out the 2D data in the single-frame image
 darkspec2 = conv2(darkspec,gausskernel,'same');
 mxwindow = max(window);
+% These next two lines replace the outer boundaries of the convolved
+% image (darspec2) with the original values. I'm not surprised that the
+% edge regions of the convolution might be affected in a way we don't want,
+% e.g. averaging in zeros.
 darkspec2(1:mxwindow,:) = darkspec(1:mxwindow,:); darkspec2((py-mxwindow+1):py,:) = darkspec((py-mxwindow+1):py,:);
 darkspec2(:,1:mxwindow) = darkspec(:,1:mxwindow); darkspec2(:,(px-mxwindow+1):px) = darkspec(:,(px-mxwindow+1):px);
+
 % figure; imagesc(darkspec); ct = caxis;
 %darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
 % figure; imagesc(darkspec); caxis(ct);
