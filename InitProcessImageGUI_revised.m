@@ -321,6 +321,10 @@ darkspec = squeeze(nanmean(darkspec));
 % Filter Dark Spectrum
 % (the window and winsig values are at the start of the 'options' section
 % above)
+
+% AJB note 2024.07.28: the gausskernel is only in the horiztonal direction,
+% I believe. That's why the darkspec2 spectrum smears only in the
+% horizontal.
 gausskernel = exp(-(window.^2)./(2.*winsig.^2));
 gausskernel = gausskernel./sum(gausskernel(:));
 % smooth out the 2D data in the single-frame image
@@ -343,18 +347,27 @@ darkspec2(:,1:mxwindow) = darkspec(:,1:mxwindow); darkspec2(:,(px-mxwindow+1):px
 
 % AJB 2024.07.28:
 % I do not see anywhere that the smoothed darkspec2 has been used to create
-% a new darkspec value. The middle line of code below was commented out at
-% some point:
+% a new darkspec value. 
 
-    % figure; imagesc(darkspec); ct = caxis;
-    %darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
-    % figure; imagesc(darkspec); caxis(ct);
+% I've left this here in case we want to change the kernel and want to plot
+% the before and after
 
-% With that line commented out, I think the darkspec image being used below
+    % figure; 
+    % subplot(211)
+    % imagesc(darkspec); colormap gray; crange = [900, 1050]; clim(crange);
+    % axis equal; axis tight; colorbar; 
+    % title('darkspec')
+    % subplot(212)
+    % % darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
+    % imagesc(darkspec2); colormap gray; clim(crange);
+    % axis equal; axis tight; colorbar; 
+    % title('darkspec2')
+
+% Without setting darkspec = darkspec2 (which we haven't been doing), 
+% I think the darkspec image being used below
 % is just a lightly-corrected (for extreme values) average frame, without
 % any smoothing.
-% I would think we would want to use the darkspec2 image, as it has been
-% more thoroughly smoothed.
+
 
 % But I want to move to a time-flexible model, so all of the
 % above is really the OLD idea for correcting the dark counts. 
