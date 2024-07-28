@@ -23,7 +23,25 @@ function varargout = InitProcessImageGUI_revised(varargin)
 % hello github
 % Edit the above text to modify the response to help InitProcessImageGUI_revised
 
-% ajb says hello
+% This branch is trying to revise the darkspec approach -- instead of a
+% single experimental dark measurement with the same settings as the data 
+% measurement, we will instead characterize the CCD dark response via two
+% constants: 
+%   ReadoutOffset: the average bias due to readout at each pixel (which
+%   might wind up being a global constant)
+%   
+%   ThermalFactor: factor to calculate the thermal counts as a function of
+%   time -- ThermalFactor x time = thermal counts
+%
+% These factors will be determined by averaging over many frames (>25) and
+% perhaps averaging over neighboring pixels.
+%
+% Once we have these factors, we can subtract off the non-photon counts
+% mathematically. The "ExposureTime" field, which is automatically recorded
+% in the data measurement, is the only other parameter needed, ideally.
+%
+% - ajb 2024.07.24
+
 
 % Last Modified by GUIDE v2.5 20-Sep-2016 09:46:11
 
