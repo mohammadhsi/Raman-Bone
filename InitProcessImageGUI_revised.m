@@ -309,6 +309,8 @@ darkspec(darkspec > permute(repmat(darkspecmed+5.*darkspecmad,[1 1 size(darkspec
 darkspec(darkspec < permute(repmat(darkspecmed-5.*darkspecmad,[1 1 size(darkspec,1)]),[3 1 2])) = nan;
 % "nanmean" simply takes a mean that ignores NaN values.
 darkspec = squeeze(nanmean(darkspec));
+% It is this line above that creates an averaged single frame from the
+% original multiframe darkspec.
 
 % Remove bad pixels%%%Keren: we do not have bad pixels on new CCD
 % 07/14/2020
@@ -331,9 +333,31 @@ mxwindow = max(window);
 darkspec2(1:mxwindow,:) = darkspec(1:mxwindow,:); darkspec2((py-mxwindow+1):py,:) = darkspec((py-mxwindow+1):py,:);
 darkspec2(:,1:mxwindow) = darkspec(:,1:mxwindow); darkspec2(:,(px-mxwindow+1):px) = darkspec(:,(px-mxwindow+1):px);
 
-% figure; imagesc(darkspec); ct = caxis;
-%darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
-% figure; imagesc(darkspec); caxis(ct);
+% After all of this processing, what we have is a smoothed version of a
+% single frame. Extreme pixel values have been rejected, using mad and median
+% functions to define extremes ad hoc.
+% Data were then averaged over all frames. 
+% That average frame was conv2-ed by a Gaussian kernel. And
+% finally the edge values were restored to non-convolved data to avoid
+% convolution effects in that zone.
+
+% AJB 2024.07.28:
+% I do not see anywhere that the smoothed darkspec2 has been used to create
+% a new darkspec value. The middle line of code below was commented out at
+% some point:
+
+    % figure; imagesc(darkspec); ct = caxis;
+    %darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
+    % figure; imagesc(darkspec); caxis(ct);
+
+% With that line commented out, I think the darkspec image being used below
+% is just a lightly-corrected (for extreme values) average frame, without
+% any smoothing.
+% I would think we would want to use the darkspec2 image, as it has been
+% more thoroughly smoothed.
+
+% But I want to move to a time-flexible model, so all of the
+% above is really the OLD idea for correcting the dark counts. 
 
 %% Determine Wavelength Calibration
 set(handles.initprocessstatus,'string','Status: Determining Wavelength Calibration...'); pause(1E-6)
@@ -348,8 +372,8 @@ neon = median(neon,3);
 % equal light levels for all three fiber bundles -- ajb 2024.02.18
 sneon = sum(neon,1).';   
 
-% neon = neon-darkspec.*accum;   % -- darkspec removal not needed for this
-% task - ajb 2024.01.10
+% neon = neon-darkspec.*accum;   
+% !! darkspec removal not needed for this task - ajb 2024.01.10
 
 % % Remove bad pixels %We do not have bad pixels in new CCD %Keren
 % neon(82:256,185) = mean(neon(82:256,[184 186]),2);

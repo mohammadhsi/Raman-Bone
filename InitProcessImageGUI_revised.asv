@@ -302,11 +302,15 @@ darkspec = squeeze(double(permute(reshape(darkspec.RawData.Spectrum.',px,py, ...
 darkspecmad = squeeze(mad(darkspec,1));
 darkspecmed = squeeze(median(darkspec,1));
 
-% 2024.07.28, AJB: have not yet looked into what these lines of code do.
-% It looks like it is 
+% 2024.07.28, AJB: 
+% It looks like this is rejecting values that exceed a certain distance from
+% the median (darkspecmed), setting them to nan.
 darkspec(darkspec > permute(repmat(darkspecmed+5.*darkspecmad,[1 1 size(darkspec,1)]),[3 1 2])) = nan;
 darkspec(darkspec < permute(repmat(darkspecmed-5.*darkspecmad,[1 1 size(darkspec,1)]),[3 1 2])) = nan;
+% "nanmean" simply takes a mean that ignores NaN values.
 darkspec = squeeze(nanmean(darkspec));
+% It is this line above that creates an averaged single frame from the
+% original multiframe darkspec.
 
 % Remove bad pixels%%%Keren: we do not have bad pixels on new CCD
 % 07/14/2020
@@ -315,15 +319,38 @@ darkspec = squeeze(nanmean(darkspec));
 % darkspec(113,501) = mean(darkspec(113,[500 502]),2);
 
 % Filter Dark Spectrum
+% (the window and winsig values are at the start of the 'options' section
+% above)
 gausskernel = exp(-(window.^2)./(2.*winsig.^2));
 gausskernel = gausskernel./sum(gausskernel(:));
+% smooth out the 2D data in the single-frame image
 darkspec2 = conv2(darkspec,gausskernel,'same');
 mxwindow = max(window);
+% These next two lines replace the outer boundaries of the convolved
+% image (darspec2) with the original values. I'm not surprised that the
+% edge regions of the convolution might be affected in a way we don't want,
+% e.g. averaging in zeros.
 darkspec2(1:mxwindow,:) = darkspec(1:mxwindow,:); darkspec2((py-mxwindow+1):py,:) = darkspec((py-mxwindow+1):py,:);
 darkspec2(:,1:mxwindow) = darkspec(:,1:mxwindow); darkspec2(:,(px-mxwindow+1):px) = darkspec(:,(px-mxwindow+1):px);
-% figure; imagesc(darkspec); ct = caxis;
-%darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
-% figure; imagesc(darkspec); caxis(ct);
+
+% After all of this processing, what we have is a smoothed version of a
+% single frame. Extreme pixel values have been rejected, using mad and median
+% functions to define extremes ad hoc.
+% Data were then averaged over all frames. 
+% That average frame was conv2-ed by a Gaussian kernel. And
+% finally the edge values were restored to non-convolved data to avoid
+% convolution effects in that zone.
+
+% I do not see anywhere that the smoothed darkspec2 has been used to create
+% a new darkspec value. The middle line of code below was commented out at
+% some point:
+
+    % figure; imagesc(darkspec); ct = caxis;
+    %darkspec = darkspec2; clear darkspec2; %CM comment 12/11/2021
+    % figure; imagesc(darkspec); caxis(ct);
+
+% With that line commented out, I think the darkspec image being used below
+% is just a light
 
 %% Determine Wavelength Calibration
 set(handles.initprocessstatus,'string','Status: Determining Wavelength Calibration...'); pause(1E-6)
@@ -338,8 +365,8 @@ neon = median(neon,3);
 % equal light levels for all three fiber bundles -- ajb 2024.02.18
 sneon = sum(neon,1).';   
 
-% neon = neon-darkspec.*accum;   % -- darkspec removal not needed for this
-% task - ajb 2024.01.10
+% neon = neon-darkspec.*accum;   
+% !! darkspec removal not needed for this task - ajb 2024.01.10
 
 % % Remove bad pixels %We do not have bad pixels in new CCD %Keren
 % neon(82:256,185) = mean(neon(82:256,[184 186]),2);
