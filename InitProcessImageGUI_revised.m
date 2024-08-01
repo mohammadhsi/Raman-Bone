@@ -193,7 +193,7 @@ window = -6:6; winsig = 10;
 % CCD Image Size
 %px = 1024; py = 256;%Keren change it to 255 for microscope system
 
-% We replaced the bone project ccd with iDus DV420A model
+% We replaced the bone project ccd with iDus DV420A model (1 August 2024)
 px = 1024; py = 255;%Keren change it to 255 for microscope system
 
 
