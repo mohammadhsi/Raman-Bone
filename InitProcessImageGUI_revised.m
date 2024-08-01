@@ -191,7 +191,11 @@ function initialprocess_Callback(hObject, eventdata, handles)
 window = -6:6; winsig = 10;
 
 % CCD Image Size
-px = 1024; py = 256;%Keren change it to 255 for microscope system
+%px = 1024; py = 256;%Keren change it to 255 for microscope system
+
+% We replaced the bone project ccd with iDus DV420A model
+px = 1024; py = 255;%Keren change it to 255 for microscope system
+
 
 % Aberration Correction
 polyorderaberration = 2;
