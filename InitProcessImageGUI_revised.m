@@ -22,6 +22,7 @@ function varargout = InitProcessImageGUI_revised(varargin)
 % See also: GUIDE, GUIDATA, GUIHANDLES
 
 % using Microsoft VS Code to do the commmits... ajb 2024.08.03
+% adding one more line just to check
 
 % Edit the above text to modify the response to help InitProcessImageGUI_revised
 
