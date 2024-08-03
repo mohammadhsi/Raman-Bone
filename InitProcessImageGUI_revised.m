@@ -20,7 +20,9 @@ function varargout = InitProcessImageGUI_revised(varargin)
 %      instance to run (singleton)".
 %
 % See also: GUIDE, GUIDATA, GUIHANDLES
-% hello github
+
+% using Microsoft VS Code to do the commmits... ajb 2024.08.03
+
 % Edit the above text to modify the response to help InitProcessImageGUI_revised
 
 % This branch is trying to revise the darkspec approach -- instead of a
