@@ -194,7 +194,7 @@ window = -6:6; winsig = 10;
 %px = 1024; py = 256;%Keren change it to 255 for microscope system
 
 % We replaced the bone project ccd with iDus DV420A model (1 August 2024)
-px = 1024; py = 255;%Keren change it to 255 for microscope system
+px = 1024; py = 254;% Mohammad and Sadia change it to 255 for bone system
 
 
 % Aberration Correction
@@ -224,12 +224,16 @@ thedgedist = 4;
 % April 3 2024
 %npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42    954.74        966.54]';
 
+
+
+%Using February 26 calibration data on May 29 data, updated on July 19
+%npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        898.86        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42        966.54]';
+
 %July 15, 2024
 %npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39        886.55        891.95        914.87        920.18        NaN        930.09        NaN        932.65        NaN        942.54        NaN        953.42        954.74        966.54]';
 
-%Using February 26 calibration data on May 29 data, updated on July 19
-npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        898.86        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42        966.54]';
-
+% 2 August 2024
+npeaklambda = [859.13      NaN        865.44           NaN        870.41        878.06        885.39        891.95        898.86        914.87        920.18           NaN           NaN        930.09        932.65           NaN        942.54           NaN  NaN        953.42      966.54]';
 
 
 % number of peaks calculated directly from the values above
@@ -248,8 +252,11 @@ npeakstripwindow = 4;
 
 %typeakwavenum = [329.2 390.9 465.1 504 NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; %--Latest January 16
 
-typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
+%typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
 % created January 26, using ImprovedRelativePeakLocations
+
+% August 5 2024
+typeakwavenum = [390.9          465.1            504            NaN            NaN          651.6          710.8            NaN          797.2          857.9            NaN            NaN            NaN         1168.5         1236.8         1278.5         1329.9         1371.5         1561.6            NaN         1648.4].'; 
 
 typeaknum = length(typeakwavenum);
 typeakstripwindow = 15;
