@@ -213,9 +213,20 @@ thedgedist = 4;
 % npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39	886.55        891.95        914.87        920.18           NaN      930.09    NaN        932.65           NaN        942.54           NaN           NaN        953.42	954.74        966.54].';
 % Created on January 26, 2024, using ImprovedRelativePeakLocations
 
-% current
-npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
-% Created on 2024.02.17
+
+% % Created on 2024.02.17
+%npeaklambda = [849.54 859.13 NaN 865.44 NaN 870.41 878.06 885.39 891.95 898.86 914.87 920.18 NaN 930.09 932.65 NaN 942.54 NaN NaN 953.42 966.54]';
+
+% April 3 2024
+%npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42    954.74        966.54]';
+
+%July 15, 2024
+%npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39        886.55        891.95        914.87        920.18        NaN        930.09        NaN        932.65        NaN        942.54        NaN        953.42        954.74        966.54]';
+
+%Using February 26 calibration data on May 29 data, updated on July 19
+npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        898.86        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42        966.54]';
+
+
 
 % number of peaks calculated directly from the values above
 npeaknum = length(npeaklambda);
@@ -252,16 +263,30 @@ specind = logical(1 - ((1-cellfun('isempty', regexp(allfiles,'throughput'))) + .
 list = allfiles(specind);
 
 %% Load Dark Spectrum
+%% Load Dark Spectrum for real data and calibration data
 set(handles.initprocessstatus,'string','Status: Calculating Dark Spectrum...'); pause(1E-6)
-darkspec = load([filedir '/darkspec_cali.mat']);
-darkspec = squeeze(double(permute(reshape(darkspec.RawData.Spectrum.',px,py, ...
-    str2double(darkspec.RawData.NumofKin)),[3 2 1])./...
-    str2double(darkspec.RawData.NumofAcu)));
-darkspecmad = squeeze(mad(darkspec,1));
-darkspecmed = squeeze(median(darkspec,1));
-darkspec(darkspec > permute(repmat(darkspecmed+5.*darkspecmad,[1 1 size(darkspec,1)]),[3 1 2])) = nan;
-darkspec(darkspec < permute(repmat(darkspecmed-5.*darkspecmad,[1 1 size(darkspec,1)]),[3 1 2])) = nan;
-darkspec = squeeze(nanmean(darkspec));
+
+% Load the dark spectrum for real data
+darkspec_real = load([filedir '/darkspec_real.mat']);
+darkspec_real = squeeze(double(permute(reshape(darkspec_real.RawData.Spectrum.',px,py, ...
+    str2double(darkspec_real.RawData.NumofKin)),[3 2 1])./...
+    str2double(darkspec_real.RawData.NumofAcu)));
+darkspec_real_mad = squeeze(mad(darkspec_real,1));
+darkspec_real_med = squeeze(median(darkspec_real,1));
+darkspec_real(darkspec_real > permute(repmat(darkspec_real_med+5.*darkspec_real_mad,[1 1 size(darkspec_real,1)]),[3 1 2])) = nan;
+darkspec_real(darkspec_real < permute(repmat(darkspec_real_med-5.*darkspec_real_mad,[1 1 size(darkspec_real,1)]),[3 1 2])) = nan;
+darkspec_real = squeeze(nanmean(darkspec_real));
+
+% Load the dark spectrum for calibration (whitelamp, throughput)
+darkspec_cali = load([filedir '/darkspec_cali.mat']);
+darkspec_cali = squeeze(double(permute(reshape(darkspec_cali.RawData.Spectrum.',px,py, ...
+    str2double(darkspec_cali.RawData.NumofKin)),[3 2 1])./...
+    str2double(darkspec_cali.RawData.NumofAcu)));
+darkspec_cali_mad = squeeze(mad(darkspec_cali,1));
+darkspec_cali_med = squeeze(median(darkspec_cali,1));
+darkspec_cali(darkspec_cali > permute(repmat(darkspec_cali_med+5.*darkspec_cali_mad,[1 1 size(darkspec_cali,1)]),[3 1 2])) = nan;
+darkspec_cali(darkspec_cali < permute(repmat(darkspec_cali_med-5.*darkspec_cali_mad,[1 1 size(darkspec_cali,1)]),[3 1 2])) = nan;
+darkspec_cali = squeeze(nanmean(darkspec_cali));
 
 % Remove bad pixels%%%Keren: we do not have bad pixels on new CCD
 % 07/14/2020
@@ -310,13 +335,9 @@ sneon = sum(neon,1).';
 % 2/1/2024 ---smh
 
 minPeakProminence = 0.01 * max(sum(neon,1).');
-minPeakHeight = 0.01 * max(sum(neon,1).');
-minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
-threshold = 0.0001 * max(sum(neon,1).');
-windowSize = 2;
 
-% finding neon peaks
-[npeakpixels,npeakheight] = ImprovedRelativePeakLocations_V2([], sum(neon,1).', npeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
+[npeakpixels,npeakheight] = RelativePeakLocations([],sum(neon,1).',npeaknum,windowSize,minPeakProminence);
+
 % function ..V2 reports the number of peaks and the corresponding heights
 %   if this returns a different number of peaks than expected from the 
 %   hardwired list of neon peaks, then set the expected number to be 
@@ -424,7 +445,7 @@ if size(throughput,1) > 1
 else
     throughput = squeeze(throughput);
 end
-throughput = throughput-darkspec;  
+throughput = throughput-darkspec_cali;  
 % -- maybe not needed for this task   ajb
 % 2024.01.10
 
@@ -456,7 +477,7 @@ if size(whitelamp,1) > 1
 else
     whitelamp = squeeze(whitelamp);
 end
-whitelamp = whitelamp-darkspec;
+whitelamp = whitelamp-darkspec_cali;
 
 %% Detection system calibration steps
 
@@ -537,17 +558,20 @@ stylenol = stylenol - min(stylenol) + 1;
 %[typeakwavelength1,typeakheight1] = ImprovedPeakLocations(process.wavelength,stylenol,typeaknum,10,1,1);
 
 %% settings to automatically lable a reasonable number of tylenol peaks
-minPeakProminence = 0.0001 * max(sum(neon,1).');
-minPeakHeight = 0.0001 * max(sum(neon,1).');
+% taken from Gamma-AJB-B
+minPeakProminence = 0.01 * max(stylenol);
+minPeakHeight = 0.00001 * max(stylenol);
 minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
-%threshold = 0.0001 * max(sum(neon,1).');
+%threshold = 0.000001 * max(stylenol);
 threshold = 0;
 windowSize = 2;
 
-[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V2(process.wavelength,stylenol, typeaknum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
-%[typeakwavelength,typeakheight] = ImprovedRelativePeakLocations_V1(process.wavelength,stylenol,typeaknum,10,300);
+
+
+[typeakwavelength,typeakheight] = RelativePeakLocations(process.wavelength,stylenol,typeaknum,windowSize,minPeakProminence);
 
 % NumberOfTylenolPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
+
 
 % Figure out which is smaller: the number of peaks found by the ..V2 algorithm
 % above, or the number of peaks expected from the hardwired values at the
@@ -627,29 +651,15 @@ set(handles.initprocessstatus,'string','Status: Determining Aberration Correctio
 % brightly as possible in order to get best data
 %   Using the 3 fiber bundles, it is *possible* to get 40 peaks detected,
 % but white light is better, as it lights up all fibers nearly equally.  
-[idealycps,peakheight] = PeakLocationsJ([],sum(whitelamp,2),fibernum,thpeakstripwindow,thedgedist);
+%[idealycps,peakheight] = PeakLocationsJ([],sum(whitelamp,2),fibernum,thpeakstripwindow,thedgedist);
 
 % [idealycps,peakheight] = PeakLocationsJ([],sum(throughput,2),fibernum,thpeakstripwindow,thedgedist);
 
 % 1/2/2024 ---smh
-%startsmh
-
-% epsilon = 1e-3;
-% offset_p = abs(min(min(sum(throughput,2)), 0)) + epsilon;  % epsilon can be a small value like 1e-3 to avoid zero values
-% adjustedSpectrum = sum(throughput,2) + offset_p;
-% 
 % minPeakProminence = 0.000000001 * max(sum(neon,1).');
-% minPeakHeight = 0.000000001 * max(sum(neon,1).');
-% minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
-% %threshold = 0.0001 * max(sum(neon,1).');
-% threshold = 0;
-% windowSize = 2;
 
-% [idealycps_smh,peakheight_smh] = ImprovedRelativePeakLocations_V2([],adjustedSpectrum, fibernum, windowSize, minPeakProminence, minPeakHeight, minPeakDistance, threshold);
-% 
-% [idealycps_smh2,peakheight_smh2] = ImprovedRelativePeakLocations_V1([],adjustedSpectrum,fibernum,2,minPeakProminence);
+[idealycps,peakheight] = RelativePeakLocations([],sum(whitelamp,2),fibernum,2,minPeakProminence);
 
-%endsmh
 
 ridealycps = round(idealycps);  % this rounds to the nearest integer for the y-heights of the ideal stripes
 
@@ -688,7 +698,10 @@ end
 % for now, keep using PeakLocationsJ (could switch to Mohammad's V2 later)
 nedgedist = tyedgedist;   % neon has no peaks near the far edge; maybe a problem at near edge?
 
-idealxcps = PeakLocationsJ([],sneon,npeaknum,npeakstripwindow,tyedgedist,0,2);
+%idealxcps = PeakLocationsJ([],sneon,npeaknum,npeakstripwindow,tyedgedist,0,2);
+
+[idealxcps,~] = RelativePeakLocations([],sneon,npeaknum,npeakstripwindow,minPeakProminence);
+
 % idealxcps = PeakLocationsJ([],stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
 ridealxcps = round(idealxcps);
 
@@ -917,7 +930,8 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
                         
                         % ZC_2(:,i) = ZC_leg_thru(:,i)./(fp); %
                         %ZC_2(:,i) = ZC_leg_thru(:,i); 
-        end
+        
+        end % of loop over legs
         
         % this becomes the data for the klm-th experimental measurement
         ZC_3(:,:,klm) = ZC_leg_FP_thru; 
@@ -1160,9 +1174,14 @@ s = what(process.filedirectory ); process.list = s.mat;
 [process.list] = sort_nat(process.list).';
 
 % Wavenumber regions
+
+% the extra-large wavenumber values (i.e. overflow for the polynomial fit)
 c1 = str2double(get(handles.c1,'string')); c2 = str2double(get(handles.c2,'string'));
+% the spectral wavenumber values desired
 c1t = str2double(get(handles.c1t,'string')); c2t = str2double(get(handles.c2t,'string'));
+% optional spectral range for normalization (we haven't been using it)
 c1n = str2double(get(handles.c1n,'string')); c2n = str2double(get(handles.c2n,'string'));
+% read all of these into 'process'
 process.processoptions.c1 = c1; process.processoptions.c2 = c2;
 process.processoptions.c1t = c1t; process.processoptions.c2t = c2t;
 process.wavenum = (process.processoptions.c1:2:process.processoptions.c2).';
@@ -1182,9 +1201,13 @@ else
     addlb = addlb.basis;
 end
 
+% fill out other 'process' values
 process.processoptions.polyorder = str2double(get(handles.bkgdpolyorder,'string'));
 process.processoptions.iter = str2double(get(handles.iter,'string'));
 %process.processoptions.iter = 100; %CM 4/19
+
+% cosmic ray value using mean absolute deviation
+%  (ajb: not sure what this term means without further diving)
 process.processoptions.crrmad = str2double(get(handles.crrmad,'string'));
 process.processoptions.convergepercent = str2double(get(handles.convergepercent,'string'));
 process.processoptions.peakremovalflag = get(handles.peakremovalflag,'value');
@@ -1276,6 +1299,7 @@ for jkl = 1:size(process.list,2)
 %             process.processoptions.noisefac, ...
 %             process.shotnoise{jkl});
         
+            % anita processing
             [process.anitaspec{jkl}] = IanitaJ(process.wavenum, ...
             process.spec{jkl},process.processoptions.polyorder, ...
             c1,c2,process.processoptions.iter,addlb, ...
@@ -1314,6 +1338,7 @@ end
 clearvars -except handles process c1 c2 c1t c2t addlb
 
 % Calculate mean spectrum and shotnoise
+
 process.meanspec = cell2mat(cellfun(@mean,process.spec, ...
     num2cell(ones(size(process.spec)).*2),'uniformoutput',0));
 
@@ -2354,6 +2379,66 @@ axis tight; box off;
 yt = ylim; yrange = range(yt);
 yt(1) = yt(1)-yrange.*0.05; yt(2) = yt(2)+yrange.*0.05; ylim(yt);
 
+
+function [peakIndices, peakHeights] = RelativePeakLocations(xaxis, spectrum, peaknum, windowSize, minPeakProminence)
+    % ImprovedRelativePeakLocations: Function to find local maxima based on relative heights
+    % xaxis: The x-axis values of the spectrum
+    % spectrum: The spectral data
+    % peaknum: The number of peaks to find
+    % windowSize: The size of the window to compare peak heights
+    % minPeakProminence: The minimum prominence of peaks
+
+    % Validate inputs
+    if nargin < 5
+        error('Insufficient input arguments.');
+    end
+    
+    % Pass empty xaxis to simply use pixel number.  peakstripwindow and
+    % edgedist are always in PIXELS independent of xaxis.
+    if isempty(xaxis) == 1
+    xaxis = (1:size(spectrum,1)).';
+    elseif size(xaxis,1) ~= size(spectrum,1)
+    warning('xaxis is not the same size as the length of spec.  Setting xaxis equal to pixel number...')
+    xaxis = 1:size(spec,1);
+    end
+
+    % Smooth the spectrum to reduce noise
+    %smoothedSpectrum = smoothdata(spectrum, 'sgolay');
+
+    % Find peaks with prominence criteria
+    [peaks, locs, widths, proms] = findpeaks(spectrum, xaxis, 'MinPeakProminence', minPeakProminence, 'Annotate', 'extents');
+
+    % Filter out peaks based on window size and relative height
+    validPeaks = arrayfun(@(loc, width) isPeakValid(spectrum, xaxis, loc, width, windowSize), locs, widths);
+    filteredPeaks = peaks(validPeaks);
+    filteredLocs = locs(validPeaks);
+
+    % Limit the number of peaks to the specified number
+    if length(filteredPeaks) > peaknum
+        [~, topPeakIndices] = maxk(filteredPeaks, peaknum);
+        peakIndices = filteredLocs(topPeakIndices);
+        peakHeights = filteredPeaks(topPeakIndices);
+    else
+        peakIndices = filteredLocs;
+        peakHeights = filteredPeaks;
+    end
+
+    % Sort peaks by their position
+    [peakIndices, sortedIndices] = sort(peakIndices);
+    peakHeights = peakHeights(sortedIndices);
+
+
+function isValid = isPeakValid(spectrum, xaxis, peakLoc, peakWidth, windowSize)
+    % Check if the peak is valid based on its relative height within a window
+    peakIndex = find(xaxis == peakLoc, 1);
+    windowStart = max(1, peakIndex - floor(windowSize / 2));
+    windowEnd = min(length(spectrum), peakIndex + floor(windowSize / 2));
+
+    localMin = min(spectrum(windowStart:windowEnd));
+    peakHeight = spectrum(peakIndex) - localMin;
+    
+    isValid = peakHeight >= peakWidth; % Adjust this condition based on your criteria
+    %isValid = peakHeight >= 0; % Adjust this condition based on your criteria
 
 
 
