@@ -224,8 +224,10 @@ thedgedist = 4;
 %npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39        886.55        891.95        914.87        920.18        NaN        930.09        NaN        932.65        NaN        942.54        NaN        953.42        954.74        966.54]';
 
 %Using February 26 calibration data on May 29 data, updated on July 19
-npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        898.86        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42        966.54]';
+%npeaklambda = [849.54        859.13           NaN        865.44           NaN        870.41        878.06        885.39        891.95        898.86        914.87        920.18           NaN        930.09        932.65           NaN        942.54           NaN           NaN        953.42        966.54]';
 
+% September 3 2024
+npeaklambda = [849.54        859.13           NaN        865.44           NaN        878.06        885.39        886.55        891.95        914.87        920.18        NaN        930.09        NaN        932.65        NaN        942.54        NaN        953.42        954.74        966.54]';
 
 
 % number of peaks calculated directly from the values above
@@ -244,8 +246,11 @@ npeakstripwindow = 4;
 
 %typeakwavenum = [329.2 390.9 465.1 504 NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; %--Latest January 16
 
-typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
+%typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
 % created January 26, using ImprovedRelativePeakLocations
+
+% September 3 2024
+typeakwavenum = [329.2          390.9          465.1            504            NaN          NaN          651.6          710.8            NaN          797.2            NaN          857.9            NaN         1168.5         1236.8         1278.5         1329.9         1371.5         1561.6            NaN         1648.4].'; 
 
 typeaknum = length(typeakwavenum);
 typeakstripwindow = 15;
@@ -547,14 +552,7 @@ stylenol = stylenol - min(stylenol) + 1;
 %% settings to automatically lable a reasonable number of tylenol peaks
 % taken from Gamma-AJB-B
 minPeakProminence = 0.01 * max(stylenol);
-minPeakHeight = 0.00001 * max(stylenol);
-minPeakDistance = 1;  % Adjust based on the spacing of peaks in your spectrum
-%threshold = 0.000001 * max(stylenol);
-threshold = 0;
 windowSize = 2;
-
-
-
 [typeakwavelength,typeakheight] = RelativePeakLocations(process.wavelength,stylenol,typeaknum,windowSize,minPeakProminence);
 
 % NumberOfTylenolPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
