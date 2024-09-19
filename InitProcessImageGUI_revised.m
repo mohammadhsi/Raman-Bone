@@ -335,6 +335,7 @@ windowSize = 2;
 
 [npeakpixels,npeakheight] = RelativePeakLocations([],sum(neon,1).',npeaknum,windowSize,minPeakProminence);
 
+
 % function ..V2 reports the number of peaks and the corresponding heights
 %   if this returns a different number of peaks than expected from the 
 %   hardwired list of neon peaks, then set the expected number to be 
@@ -558,7 +559,7 @@ stylenol = stylenol - min(stylenol) + 1;
 % taken from Gamma-AJB-B
 minPeakProminence = 0.01 * max(stylenol);
 windowSize = 2;
-[typeakwavelength,typeakheight] = RelativePeakLocations(process.wavelength,stylenol,typeaknum,windowSize,minPeakProminence);
+[typeakwavelength,typeakheight] = RelativePeakLocations(process.wavelength,stylenol,typeaknum,windowSize,minPeakProminence,tyedgedist);
 
 % NumberOfTylenolPeaksToLabel = min(length(npeaklambda), length(npeakpixels));
 
@@ -648,7 +649,7 @@ set(handles.initprocessstatus,'string','Status: Determining Aberration Correctio
 % 1/2/2024 ---smh
 % minPeakProminence = 0.000000001 * max(sum(neon,1).');
 
-[idealycps,peakheight] = RelativePeakLocations([],sum(whitelamp,2),fibernum,2,minPeakProminence);
+[idealycps,peakheight] = RelativePeakLocations([],sum(whitelamp,2),fibernum,2,minPeakProminence,thedgedist);
 
 
 ridealycps = round(idealycps);  % this rounds to the nearest integer for the y-heights of the ideal stripes
@@ -690,7 +691,7 @@ nedgedist = tyedgedist;   % neon has no peaks near the far edge; maybe a problem
 
 %idealxcps = PeakLocationsJ([],sneon,npeaknum,npeakstripwindow,tyedgedist,0,2);
 
-[idealxcps,~] = RelativePeakLocations([],sneon,npeaknum,npeakstripwindow,minPeakProminence);
+[idealxcps,~] = RelativePeakLocations([],sneon,npeaknum,npeakstripwindow,minPeakProminence,tyedgedist);
 
 % idealxcps = PeakLocationsJ([],stylenol,typeaknum,typeakstripwindow,tyedgedist,0,2);
 ridealxcps = round(idealxcps);
@@ -2370,36 +2371,51 @@ yt = ylim; yrange = range(yt);
 yt(1) = yt(1)-yrange.*0.05; yt(2) = yt(2)+yrange.*0.05; ylim(yt);
 
 
-function [peakIndices, peakHeights] = RelativePeakLocations(xaxis, spectrum, peaknum, windowSize, minPeakProminence)
+function [peakIndices, peakHeights] = RelativePeakLocations(xaxis, spectrum, peaknum, windowSize, minPeakProminence, edgedist1)
     % ImprovedRelativePeakLocations: Function to find local maxima based on relative heights
     % xaxis: The x-axis values of the spectrum
     % spectrum: The spectral data
     % peaknum: The number of peaks to find
-    % windowSize: The size of the window to compare peak heights
-    % minPeakProminence: The minimum prominence of peaks
+    % windowSize: (Optional) The size of the window to compare peak heights
+    % minPeakProminence: (Optional) The minimum prominence of peaks
+    % edgedist1: (Optional) Minimum distance from the edges to consider peaks
 
     % Validate inputs
-    if nargin < 5
+    if nargin < 3
         error('Insufficient input arguments.');
     end
+
+    % Set windowSize to a default value if not provided (Optional)
+    if nargin < 4 || isempty(windowSize)
+        windowSize = round(length(spectrum) / 20);  % Default window size is 5% of spectrum length
+    end
     
-    % Pass empty xaxis to simply use pixel number.  peakstripwindow and
-    % edgedist are always in PIXELS independent of xaxis.
-    if isempty(xaxis) == 1
-    xaxis = (1:size(spectrum,1)).';
-    elseif size(xaxis,1) ~= size(spectrum,1)
-    warning('xaxis is not the same size as the length of spec.  Setting xaxis equal to pixel number...')
-    xaxis = 1:size(spec,1);
+    % Set minPeakProminence to a default value if not provided (Optional)
+    if nargin < 5 || isempty(minPeakProminence)
+        minPeakProminence = 0.01 * max(spectrum);  % Smaller default prominence (1% of max)
     end
 
-    % Smooth the spectrum to reduce noise
-    %smoothedSpectrum = smoothdata(spectrum, 'sgolay');
+    % Check if edgedist1 is provided; if not, set it to 0 (no edge exclusion)
+    if nargin < 6 || isempty(edgedist1)
+        edgedist1 = 0;  % No edge exclusion if not provided
+    end
+    
+    % If xaxis is empty, use pixel numbers
+    if isempty(xaxis)
+        xaxis = (1:size(spectrum, 1)).';
+    elseif size(xaxis, 1) ~= size(spectrum, 1)
+        warning('xaxis is not the same size as the length of spectrum. Using pixel numbers as xaxis...');
+        xaxis = 1:size(spectrum, 1);
+    end
+
+    % Define the distance to avoid near the edges of the spectrum
+    edgedist2 = size(spectrum, 1) - edgedist1;
 
     % Find peaks with prominence criteria
-    [peaks, locs, widths, proms] = findpeaks(spectrum, xaxis, 'MinPeakProminence', minPeakProminence, 'Annotate', 'extents');
+    [peaks, locs, widths, proms] = findpeaks(spectrum, xaxis, 'MinPeakProminence', minPeakProminence);
 
-    % Filter out peaks based on window size and relative height
-    validPeaks = arrayfun(@(loc, width) isPeakValid(spectrum, xaxis, loc, width, windowSize), locs, widths);
+    % Filter out peaks based on window size, relative height, and edge distance
+    validPeaks = arrayfun(@(loc, width) isPeakValid(spectrum, xaxis, loc, width, windowSize, edgedist1, edgedist2), locs, widths);
     filteredPeaks = peaks(validPeaks);
     filteredLocs = locs(validPeaks);
 
@@ -2418,17 +2434,35 @@ function [peakIndices, peakHeights] = RelativePeakLocations(xaxis, spectrum, pea
     peakHeights = peakHeights(sortedIndices);
 
 
-function isValid = isPeakValid(spectrum, xaxis, peakLoc, peakWidth, windowSize)
+
+function isValid = isPeakValid(spectrum, xaxis, peakLoc, peakWidth, windowSize, edgedist1, edgedist2)
     % Check if the peak is valid based on its relative height within a window
     peakIndex = find(xaxis == peakLoc, 1);
+    
+    % Skip if the peak is too close to the edges
+    if edgedist1 > 0 && (peakIndex <= edgedist1 || peakIndex >= edgedist2)
+        isValid = false;
+        return;
+    end
+
+    % Define the window around the peak
     windowStart = max(1, peakIndex - floor(windowSize / 2));
     windowEnd = min(length(spectrum), peakIndex + floor(windowSize / 2));
 
+    % Get the local minimum and peak height
     localMin = min(spectrum(windowStart:windowEnd));
     peakHeight = spectrum(peakIndex) - localMin;
-    
+
+    % Determine if the peak is valid based on its height
     isValid = peakHeight >= peakWidth; % Adjust this condition based on your criteria
-    %isValid = peakHeight >= 0; % Adjust this condition based on your criteria
+
+
+
+
+
+
+
+
 
 
 
