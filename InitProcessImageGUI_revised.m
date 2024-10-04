@@ -889,11 +889,46 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
         FP_multiplier = s./whitelamp_leg(:,i);  
         % Sanity check: FP_multiplier is a vector averaged at
         % 1, with structure due to high-frequency fixed pattern
-
+        
+        % SMH
         % calculate corresponding leg spectrum
         ZC_leg(:,i) = sum(ZC(leg{i},:));
+        real_data = ZC_leg(:,i);
+        % Step 1: Center the real data by subtracting the mean
+        FP_multiplier_centered = FP_multiplier - mean(FP_multiplier);
+        FP_multiplier_fft = fft(FP_multiplier_centered);  % FFT of the FP_multiplier_centered
+        N = length(FP_multiplier);
+        freq = (0:N-1)*(1/N);  % Frequency vector
+        % figure;
+        % plot(freq, abs(FP_multiplier_fft));
+
+        % Assume f_fixed is the identified fixed pattern frequency
+        % Step 2: Find the dominant frequency (peak in the FFT magnitude)
+        low_freq_limit = 0.2;  % Adjust this value based on your needs
+        low_freq_indices = find(freq <= low_freq_limit);  % Indices of frequencies <= 0.2
+        
+        % Step 3: Find the peak in the low-frequency range of the FFT magnitude
+        [~, idx_low] = max(abs(FP_multiplier_fft(low_freq_indices)));  % Find the max in the low-frequency range
+        idx = low_freq_indices(idx_low);  % Get the index of the peak in the original FFT
+
+        % Step 3: Convert the index to the corresponding frequency
+        f_fixed = freq(idx);  % This is the dominant fixed pattern frequency
+        bandwidth = 0.01;  % A small bandwidth to target the specific frequency
+
+        % Design a narrow bandstop filter around f_fixed
+        %[b, a] = butter(4, [(f_fixed - bandwidth) (f_fixed + bandwidth)], 'stop');  % Narrow bandstop
+        [b, a] = butter(4, [0.0128 0.0276], 'stop');  % Narrow bandstop
+
+
+        % Step 3: Apply the notch filter to the real data
+        filtered_real_data = filtfilt(b, a, real_data);
+        
+        ZC_leg_FP(:,i) = filtered_real_data;
+   
+        % calculate corresponding leg spectrum
+        %ZC_leg(:,i) = sum(ZC(leg{i},:));
         % apply FP correction to the corresponding summed data
-        ZC_leg_FP(:,i) = ZC_leg(:,i) .* FP_multiplier;
+        %ZC_leg_FP(:,i) = ZC_leg(:,i) .* FP_multiplier;
 
         pause(0.1);
 
@@ -2387,7 +2422,7 @@ function [peakIndices, peakHeights] = RelativePeakLocations(xaxis, spectrum, pea
 
     % Set windowSize to a default value if not provided (Optional)
     if nargin < 4 || isempty(windowSize)
-        windowSize = round(length(spectrum) / 20);  % Default window size is 5% of spectrum length
+        windowSize = round(length(spectrum) / 20);  % Default window size is 5% of spectrum length or it could be set to "2"
     end
     
     % Set minPeakProminence to a default value if not provided (Optional)
