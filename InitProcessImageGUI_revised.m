@@ -255,7 +255,11 @@ npeakstripwindow = 4;
 %typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
 
 % September 10 2024
-typeakwavenum = [329.2          390.9            NaN            NaN          651.6          710.8     NaN     797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].';
+%typeakwavenum = [329.2          390.9            NaN            NaN          651.6          710.8     NaN     797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].';
+
+
+% October 4 2024
+typeakwavenum = [329.2          390.9          465.1            NaN            NaN          651.6          710.8           797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].';
 
 typeaknum = length(typeakwavenum);
 typeakstripwindow = 15;
