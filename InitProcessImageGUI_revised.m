@@ -851,6 +851,13 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
         leg{3} = [96:252]; %6mm offset (26 fibers)
 %-----------manual set the rows for each leg CM 12/11/2021
 
+
+
+        leg{1} = [72:100];  %0mm offset (4 fibers)              
+        leg{2} = [1:71];   %3mm offset (12 fibers)
+        leg{3} = [101:252]; %6mm offset (26 fibers)
+%-----------manual set the rows for each leg SMH 10/11/2024
+
         for klm = 1:size(Z,3)    % looping over the number of *frames* - typically 5 frames, stored separately?
                     
 %                     % Remove bad pixels  %Keren
