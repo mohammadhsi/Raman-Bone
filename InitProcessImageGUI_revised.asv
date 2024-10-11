@@ -255,7 +255,11 @@ npeakstripwindow = 4;
 %typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
 
 % September 10 2024
-typeakwavenum = [329.2          390.9            NaN            NaN          651.6          710.8     NaN     797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].';
+%typeakwavenum = [329.2          390.9            NaN            NaN          651.6          710.8     NaN     797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].';
+
+
+% October 11
+typeakwavenum = [329.2          390.9            465.1            NaN     NaN     651.6          710.8          797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].';
 
 typeaknum = length(typeakwavenum);
 typeakstripwindow = 15;
@@ -842,10 +846,18 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
                 
 %-----------manual set the rows for each leg CM 12/11/2021 not doing
 %fiberbasis to get fiber spectrum
-        leg{1} = [67:95];  %0mm offset (4 fibers)              
-        leg{2} = [1:66];   %3mm offset (12 fibers)
-        leg{3} = [96:252]; %6mm offset (26 fibers)
+        % leg{1} = [67:95];  %0mm offset (4 fibers)              
+        % leg{2} = [1:66];   %3mm offset (12 fibers)
+        % leg{3} = [96:252]; %6mm offset (26 fibers)
+
+        leg{1} = [72:100];  %0mm offset (4 fibers)              
+        leg{2} = [1:71];   %3mm offset (12 fibers)
+        leg{3} = [101:252]; %6mm offset (26 fibers)
 %-----------manual set the rows for each leg CM 12/11/2021
+        
+
+        % SMH
+        %Z  = sum(Z, 3);
 
         for klm = 1:size(Z,3)    % looping over the number of *frames* - typically 5 frames, stored separately?
                     
@@ -886,49 +898,63 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
         % Being explicit: the FP term on the next line will be
         % *multiplicative* upon data, hence the WL ripples are in
         % the denominator term
-        FP_multiplier = s./whitelamp_leg(:,i);  
+        FP_multiplier2 = s./whitelamp_leg(:,i);  
         % Sanity check: FP_multiplier is a vector averaged at
         % 1, with structure due to high-frequency fixed pattern
         
-        % SMH
-        % calculate corresponding leg spectrum
-        ZC_leg(:,i) = sum(ZC(leg{i},:));
-        real_data = ZC_leg(:,i);
-        % Step 1: Center the real data by subtracting the mean
-        FP_multiplier_centered = FP_multiplier - mean(FP_multiplier);
-        FP_multiplier_fft = fft(FP_multiplier_centered);  % FFT of the FP_multiplier_centered
-        N = length(FP_multiplier);
-        freq = (0:N-1)*(1/N);  % Frequency vector
-        % figure;
-        % plot(freq, abs(FP_multiplier_fft));
 
-        % Assume f_fixed is the identified fixed pattern frequency
-        % Step 2: Find the dominant frequency (peak in the FFT magnitude)
-        low_freq_limit = 0.2;  % Adjust this value based on your needs
-        low_freq_indices = find(freq <= low_freq_limit);  % Indices of frequencies <= 0.2
+        % Normalize 's' by its area under the curve
+        s_normalized = s / trapz(s);
         
-        % Step 3: Find the peak in the low-frequency range of the FFT magnitude
-        [~, idx_low] = max(abs(FP_multiplier_fft(low_freq_indices)));  % Find the max in the low-frequency range
-        idx = low_freq_indices(idx_low);  % Get the index of the peak in the original FFT
+        % Normalize 'whitelamp_leg(:, i)' by its area under the curve
+        whitelamp_normalized = whitelamp_leg(:, i) / trapz(whitelamp_leg(:, i));
 
-        % Step 3: Convert the index to the corresponding frequency
-        f_fixed = freq(idx);  % This is the dominant fixed pattern frequency
-        bandwidth = 0.01;  % A small bandwidth to target the specific frequency
-
-        % Design a narrow bandstop filter around f_fixed
-        %[b, a] = butter(4, [(f_fixed - bandwidth) (f_fixed + bandwidth)], 'stop');  % Narrow bandstop
-        [b, a] = butter(4, [0.0128 0.0276], 'stop');  % Narrow bandstop
+        % Calculate FP_multiplier using normalized spectra
+        epsilon = 1e-10;
+        FP_multiplier = whitelamp_normalized ./ (s_normalized+epsilon);
 
 
-        % Step 3: Apply the notch filter to the real data
-        filtered_real_data = filtfilt(b, a, real_data);
-        
-        ZC_leg_FP(:,i) = filtered_real_data;
+
+
+        % % SMH
+        % % calculate corresponding leg spectrum
+        % ZC_leg2(:,i) = sum(ZC(leg{i},:));
+        % real_data = ZC_leg2(:,i);
+        % % Step 1: Center the real data by subtracting the mean
+        % FP_multiplier_centered = FP_multiplier - mean(FP_multiplier);
+        % FP_multiplier_fft = fft(FP_multiplier_centered);  % FFT of the FP_multiplier_centered
+        % N = length(FP_multiplier);
+        % freq = (0:N-1)*(1/N);  % Frequency vector
+        % % figure;
+        % % plot(freq, abs(FP_multiplier_fft));
+        % 
+        % % Assume f_fixed is the identified fixed pattern frequency
+        % % Step 2: Find the dominant frequency (peak in the FFT magnitude)
+        % low_freq_limit = 0.9;  % Adjust this value based on your needs
+        % low_freq_indices = find(freq >= low_freq_limit);  % Indices of frequencies <= 0.2
+        % 
+        % % Step 3: Find the peak in the low-frequency range of the FFT magnitude
+        % [~, idx_low] = max(abs(FP_multiplier_fft(low_freq_indices)));  % Find the max in the low-frequency range
+        % idx = low_freq_indices(idx_low);  % Get the index of the peak in the original FFT
+        % 
+        % % Step 3: Convert the index to the corresponding frequency
+        % f_fixed = freq(idx);  % This is the dominant fixed pattern frequency
+        % bandwidth = 0.01;  % A small bandwidth to target the specific frequency
+        % 
+        % % Design a narrow bandstop filter around f_fixed
+        % %[b, a] = butter(4, [(f_fixed - bandwidth) (f_fixed + bandwidth)], 'stop');  % Narrow bandstop
+        % [b, a] = butter(4, [0.9 0.95], 'stop');  % Narrow bandstop
+        % 
+        % 
+        % % Step 3: Apply the notch filter to the real data
+        % filtered_real_data = filtfilt(b, a, real_data);
+        % 
+        % ZC_leg_FP2(:,i) = filtered_real_data;
    
         % calculate corresponding leg spectrum
-        %ZC_leg(:,i) = sum(ZC(leg{i},:));
+        ZC_leg(:,i) = sum(ZC(leg{i},:));
         % apply FP correction to the corresponding summed data
-        %ZC_leg_FP(:,i) = ZC_leg(:,i) .* FP_multiplier;
+        ZC_leg_FP(:,i) = ZC_leg(:,i) ./ (FP_multiplier+epsilon);
 
         pause(0.1);
 
