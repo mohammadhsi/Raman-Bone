@@ -844,128 +844,129 @@ if isempty(list) == 0  % i.e. if there are 1 or more files to process
                 Z = Z.*7; % Convert to photoelectrons
                 
                 
-%-----------manual set the rows for each leg CM 12/11/2021 not doing
-%fiberbasis to get fiber spectrum
-        leg{1} = [67:95];  %0mm offset (4 fibers)              
-        leg{2} = [1:66];   %3mm offset (12 fibers)
-        leg{3} = [96:252]; %6mm offset (26 fibers)
-%-----------manual set the rows for each leg CM 12/11/2021
+                %-----------manual set the rows for each leg CM 12/11/2021 not doing
+                %fiberbasis to get fiber spectrum
+                        % leg{1} = [67:95];  %0mm offset (4 fibers)              
+                        % leg{2} = [1:66];   %3mm offset (12 fibers)
+                        % leg{3} = [96:252]; %6mm offset (26 fibers)
+                %-----------manual set the rows for each leg CM 12/11/2021
 
 
-
-        leg{1} = [72:100];  %0mm offset (4 fibers)              
-        leg{2} = [1:71];   %3mm offset (12 fibers)
-        leg{3} = [101:252]; %6mm offset (26 fibers)
-%-----------manual set the rows for each leg SMH 10/11/2024
-
-        for klm = 1:size(Z,3)    % looping over the number of *frames* - typically 5 frames, stored separately?
-                    
-%                     % Remove bad pixels  %Keren
-%                     Z(82:256,185,klm) = mean(Z(82:256,[184 186],klm),2);
-%                     Z(115:256,308,klm) = mean(Z(115:256,[307 309],klm),2);
-%                     Z(113,501,klm) = mean(Z(113,[500 502],klm),2);
-                    
-        % Aberration Correction
-        ZCt = interp2(Z(:,:,klm),Xi,Yi,'spline');
-        
-        % Crop image
-        ZC = ZCt(cpy1:cpy2,cpx1:cpx2); 
-        process.image(:,:,klm)=ZC;
-        
-        % in the future: apply row-level correction first?
+                [leg, num_fibers] = legFinder(whitelamp);
 
 
-        %% apply fixed pattern and spectral throughput changes next
-        SmoothNum = 50;  % used for both high and low freq; nothing magical about this value
+                % leg{1} = [72:100];  %0mm offset (4 fibers)              
+                % leg{2} = [1:71];   %3mm offset (12 fibers)
+                % leg{3} = [101:252]; %6mm offset (26 fibers)
+                %-----------manual set the rows for each leg SMH 10/11/2024
 
-        ZeroMMLeg = 1;      % reminder in case one forgets which is first
-        % always use first leg for throughput correction; others don't have much signal
-        
-        SummedThroughput = (sum(throughput(leg{ZeroMMLeg},:)))';
-        SmoothedThroughput = smooth(SummedThroughput,SmoothNum);
-        Throughput_Multiplier = ISRM2./SmoothedThroughput;
-        
-        % loop over the three legs
-        for i = 1:size(leg,2)
-           
-        % Part 1: high-frequency fixed pattern correction
-        
-        % get whitelamp "ripple" function for this leg
-        whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
-        s = smooth(whitelamp_leg(:,i),SmoothNum); %CM
-       
-        % Being explicit: the FP term on the next line will be
-        % *multiplicative* upon data, hence the WL ripples are in
-        % the denominator term
-        FP_multiplier = s./whitelamp_leg(:,i);  
-        % Sanity check: FP_multiplier is a vector averaged at
-        % 1, with structure due to high-frequency fixed pattern
-
-        % calculate corresponding leg spectrum
-        ZC_leg(:,i) = sum(ZC(leg{i},:));
-        % apply FP correction to the corresponding summed data
-        ZC_leg_FP(:,i) = ZC_leg(:,i) .* FP_multiplier;
-
-        pause(0.1);
-
-        % Part 2: apply universal spectral throughput
-        % correction (same for all legs because the green glass
-        % only provides strong spectral data for the 0 mm leg)
-
-        % apply the throughput correction
-        ZC_leg_FP_thru(:,i) = ZC_leg_FP(:,i) .* Throughput_Multiplier;
-
-        % for tylenol at 0 mm at least, this seems to work!
-                    
-
-                        % throughput_leg(:,i) = sum(throughput(leg{i},:)); %get throughput leg CM 12/11/2021
-                        % throughput_leg_s(:,i) = smooth(throughput_leg(:,i),100); %smooth to calculate spectral response CM 12/11/2021
-                        % throughput_leg_s(:,i) = throughput_leg_s(:,i)./ISRM2; %calculate spectral response from smooth green glass and NIST standard CM 12/11/2021
-                        % 
-                        % ZC_leg(:,i) = sum(ZC(leg{i},:)); %get data leg CM 12/11/2021
-                        % ZC_leg_thru(:,i) = ZC_leg(:,i)./throughput_leg_s(:,i);  %correct for spectral throughput CM 12/11/2021
-                        % 
-                        % whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
-                        % s = smooth(whitelamp_leg(:,i),50); %CM
-                        % fp = whitelamp_leg(:,i)./s; %low pass filter to get fixed pattern CM 12/11/2021
-%                         
+            for klm = 1:size(Z,3)    % looping over the number of *frames* - typically 5 frames, stored separately?
                         
-                        % ZC_2(:,i) = ZC_leg_thru(:,i)./(fp); %
-                        %ZC_2(:,i) = ZC_leg_thru(:,i); 
-        
-        end % of loop over legs
-        
-        % this becomes the data for the klm-th experimental measurement
-        ZC_3(:,:,klm) = ZC_leg_FP_thru; 
+                        %                     % Remove bad pixels  %Keren
+                        %                     Z(82:256,185,klm) = mean(Z(82:256,[184 186],klm),2);
+                        %                     Z(115:256,308,klm) = mean(Z(115:256,[307 309],klm),2);
+                        %                     Z(113,501,klm) = mean(Z(113,[500 502],klm),2);
+                                
+                    % Aberration Correction
+                    ZCt = interp2(Z(:,:,klm),Xi,Yi,'spline');
+                    
+                    % Crop image
+                    ZC = ZCt(cpy1:cpy2,cpx1:cpx2);
+                    process.image(:,:,klm)=ZC;
+                    
+                    % in the future: apply row-level correction first?
             
+            
+                    %% apply fixed pattern and spectral throughput changes next
+                    SmoothNum = 50;  % used for both high and low freq; nothing magical about this value
+            
+                    ZeroMMLeg = 1;      % reminder in case one forgets which is first
+                    % always use first leg for throughput correction; others don't have much signal
                     
-                    %-----No longer extracting fiber spectra CM 12/11/2021
-%                     % Extract spectrum from each fiber
-%                     for jkl = 1:cpx
-%                         [process.spec(jkl,:,klm)] = ...
-%                             OLSJ(ZC(:,jkl),[fiberbasis{jkl}]);
-%                         
-%                         % Covariance matrix of noise (assuming measurement noise is uncorrelated)
-%                         % See Determination of uncertainty in parameters extracted
-%                         % from single spectroscopic measurements, equation (4)
-%                         Cw = diag(ZC(:,jkl));
-%                         variance = diag(inv(fiberbasis{jkl}'/Cw*fiberbasis{jkl}));
-%                         variance(variance<0) = 0; variance(isnan(variance)) = 0;
-%                         
-%                         process.shotnoise(jkl,:,klm) = sqrt(variance);
-%                         
-%                         % Add readout noise?
-%                         
-%                     end
+                    SummedThroughput = (sum(throughput(leg{ZeroMMLeg},:)))';
+                    SmoothedThroughput = smooth(SummedThroughput,SmoothNum);
+                    Throughput_Multiplier = ISRM2./SmoothedThroughput;
                     
-                    %-------scaling factor from using fiberbasis => no
-                    %longer needed I think CM 12/11/2021
-%                     normfac = repmat(mean(process.shotnoise(:,:,klm)),size(process.shotnoise,1),1);
-%                     process.spec(:,:,klm) = process.spec(:,:,klm)./normfac;%filt shot noise
-%                     meansig = repmat(mean(process.spec(:,:,klm)),size(process.spec,1),1);%mean spectrum
-%                     process.spec(:,:,klm) = process.spec(:,:,klm).*meansig;
-%                     process.shotnoise(:,:,klm) = process.shotnoise(:,:,klm)./normfac.*meansig;
-                end
+                     % loop over the three legs
+                     for i = 1:size(leg,2)
+                               
+                            % Part 1: high-frequency fixed pattern correction
+                            
+                            % get whitelamp "ripple" function for this leg
+                            whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
+                            s = smooth(whitelamp_leg(:,i),SmoothNum); %CM
+                           
+                            % Being explicit: the FP term on the next line will be
+                            % *multiplicative* upon data, hence the WL ripples are in
+                            % the denominator term
+                            FP_multiplier = s./whitelamp_leg(:,i);  
+                            % Sanity check: FP_multiplier is a vector averaged at
+                            % 1, with structure due to high-frequency fixed pattern
+                    
+                            % calculate corresponding leg spectrum
+                            ZC_leg(:,i) = sum(ZC(leg{i},:));
+                            % apply FP correction to the corresponding summed data
+                            ZC_leg_FP(:,i) = ZC_leg(:,i) .* FP_multiplier;
+                    
+                            pause(0.1);
+                    
+                            % Part 2: apply universal spectral throughput
+                            % correction (same for all legs because the green glass
+                            % only provides strong spectral data for the 0 mm leg)
+                    
+                            % apply the throughput correction
+                            ZC_leg_FP_thru(:,i) = ZC_leg_FP(:,i) .* Throughput_Multiplier;
+                    
+                            % for tylenol at 0 mm at least, this seems to work!
+                                        
+                    
+                                            % throughput_leg(:,i) = sum(throughput(leg{i},:)); %get throughput leg CM 12/11/2021
+                                            % throughput_leg_s(:,i) = smooth(throughput_leg(:,i),100); %smooth to calculate spectral response CM 12/11/2021
+                                            % throughput_leg_s(:,i) = throughput_leg_s(:,i)./ISRM2; %calculate spectral response from smooth green glass and NIST standard CM 12/11/2021
+                                            % 
+                                            % ZC_leg(:,i) = sum(ZC(leg{i},:)); %get data leg CM 12/11/2021
+                                            % ZC_leg_thru(:,i) = ZC_leg(:,i)./throughput_leg_s(:,i);  %correct for spectral throughput CM 12/11/2021
+                                            % 
+                                            % whitelamp_leg(:,i) = sum(whitelamp(leg{i},:));  %get whitelamp leg 12/11/2021
+                                            % s = smooth(whitelamp_leg(:,i),50); %CM
+                                            % fp = whitelamp_leg(:,i)./s; %low pass filter to get fixed pattern CM 12/11/2021
+                    
+                                            % ZC_2(:,i) = ZC_leg_thru(:,i)./(fp); %
+                                            %ZC_2(:,i) = ZC_leg_thru(:,i); 
+                            
+                    end % of loop over legs
+                    
+                    % this becomes the data for the klm-th experimental measurement
+                    ZC_3(:,:,klm) = ZC_leg_FP_thru; 
+                        
+                                
+                                        %-----No longer extracting fiber spectra CM 12/11/2021
+                    %                     % Extract spectrum from each fiber
+                    %                     for jkl = 1:cpx
+                    %                         [process.spec(jkl,:,klm)] = ...
+                    %                             OLSJ(ZC(:,jkl),[fiberbasis{jkl}]);
+                    %                         
+                    %                         % Covariance matrix of noise (assuming measurement noise is uncorrelated)
+                    %                         % See Determination of uncertainty in parameters extracted
+                    %                         % from single spectroscopic measurements, equation (4)
+                    %                         Cw = diag(ZC(:,jkl));
+                    %                         variance = diag(inv(fiberbasis{jkl}'/Cw*fiberbasis{jkl}));
+                    %                         variance(variance<0) = 0; variance(isnan(variance)) = 0;
+                    %                         
+                    %                         process.shotnoise(jkl,:,klm) = sqrt(variance);
+                    %                         
+                    %                         % Add readout noise?
+                    %                         
+                    %                     end
+                                        
+                                        %-------scaling factor from using fiberbasis => no
+                                        %longer needed I think CM 12/11/2021
+                    %                     normfac = repmat(mean(process.shotnoise(:,:,klm)),size(process.shotnoise,1),1);
+                    %                     process.spec(:,:,klm) = process.spec(:,:,klm)./normfac;%filt shot noise
+                    %                     meansig = repmat(mean(process.spec(:,:,klm)),size(process.spec,1),1);%mean spectrum
+                    %                     process.spec(:,:,klm) = process.spec(:,:,klm).*meansig;
+                    %                     process.shotnoise(:,:,klm) = process.shotnoise(:,:,klm)./normfac.*meansig;
+            end
             process.spec = ZC_3;
             end
             
@@ -2468,10 +2469,139 @@ function isValid = isPeakValid(spectrum, xaxis, peakLoc, peakWidth, windowSize, 
     isValid = peakHeight >= peakWidth; % Adjust this condition based on your criteria
 
 
+function [leg_indices_mapped, num_fibers] = legFinder(image_name)
+% PROCESS_IMAGE Processes the image to distinguish between legs and counts fibers.
+%   [leg_indices_mapped, num_fibers] = PROCESS_IMAGE(image_name)
+%
+%   Inputs:
+%       image_name - String, the name of the image file (e.g., 'whitelamp.png')
+%
+%   Outputs:
+%       leg_indices_mapped - Cell array containing row indices for each leg.
+%       num_fibers - Array containing the number of fibers in each leg.
+
+    % Step 1: Load and Preprocess the Image
+    % Load the image
+    img = image_name;
+    
+    % Convert to grayscale if necessary
+    if size(img, 3) == 3
+        img_gray = rgb2gray(img);
+    else
+        img_gray = img;
+    end
+    
+    % Optional: Apply median filtering to reduce noise
+    img_gray = medfilt2(img_gray, [3 3]);
+    
+    % Step 2: Compute the Row-wise Intensity Profile
+    row_profile = sum(img_gray, 2);
+    
+    % Step 3: Normalize the Intensity Profile
+    row_profile_norm = row_profile / max(row_profile);
+    
+    % Step 4: Smooth the Intensity Profile (Optional)
+    %row_profile_smooth = smoothdata(row_profile_norm, 'gaussian', 5);
+    
+    % Step 5: Compute Low Intensity Threshold Based on Percentiles
+    low_intensity_threshold = prctile(row_profile_norm, 7);
+    
+    % Step 6: Identify Low-Intensity Indices
+    low_intensity_indices = find(row_profile_norm < low_intensity_threshold);
+    
+    % Step 7: Group Consecutive Low-Intensity Indices to Identify Gaps
+    diff_indices = diff(low_intensity_indices);
+    gap_starts = [low_intensity_indices(1); low_intensity_indices(find(diff_indices > 1) + 1)];
+    gap_ends = [low_intensity_indices(find(diff_indices > 1)); low_intensity_indices(end)];
+    gap_lengths = gap_ends - gap_starts + 1;
+    
+    % Step 8: Find Gaps Longer Than 5 Rows
+    significant_gaps = find(gap_lengths >= 5);
+    
+    % Step 9: Determine Leg Boundaries Based on Significant Gaps
+    leg_starts = [1; gap_ends(significant_gaps) + 1];
+    leg_ends = [gap_starts(significant_gaps) - 1; size(img_gray, 1)];
+    
+    % Ensure arrays are the same length
+    min_length = min(length(leg_starts), length(leg_ends));
+    leg_starts = leg_starts(1:min_length);
+    leg_ends = leg_ends(1:min_length);
+    
+    % Step 10: Extract Each Leg Based on Boundaries
+    num_legs = length(leg_starts);
+    legs = cell(num_legs, 1);
+    leg_indices = cell(num_legs, 1);
+    
+    for i = 1:num_legs
+        legs{i} = img_gray(leg_starts(i):leg_ends(i), :);
+        leg_indices{i} = leg_starts(i):leg_ends(i);
+    end
+    
+    % Adjust Leg Ordering to Match Specified Offsets
+    % Adjust the mapping based on your observations
+    leg_indices_mapped = cell(1,num_legs);
+    leg_indices_mapped{1} = leg_indices{2}; % Detected leg{2} is your leg{1}
+    leg_indices_mapped{2} = leg_indices{1}; % Detected leg{1} is your leg{2}
+    leg_indices_mapped{3} = leg_indices{3}; % Detected leg{3} is your leg{3}
+    
+    % Calculate the Number of Fibers in Each Leg
+    num_fibers = zeros(1,num_legs);
+    for i = 1:num_legs
+        % Calculate the number of fibers
+        % Adjust the calculation if fibers occupy more than one row
+        num_fibers(i) = floor(length(leg_indices_mapped{i})/5.5);
+    end
+    
+    % leg = cell(num_legs, 1);
+    % leg{1} = [leg_indices_mapped{1}(1), leg_indices_mapped{1}(end)];
+    % leg{2} = [leg_indices_mapped{2}(1), leg_indices_mapped{2}(end)];
+    % leg{3} = [leg_indices_mapped{3}(1), leg_indices_mapped{3}(end)];
 
 
+    % % Display the Leg Indices in the Specified Format
+    % fprintf('leg{1} = [%d:%d];  %%0mm offset (%d fibers)\n', leg_indices_mapped{1}(1), leg_indices_mapped{1}(end), num_fibers(1));
+    % fprintf('leg{2} = [%d:%d];  %%3mm offset (%d fibers)\n', leg_indices_mapped{2}(1), leg_indices_mapped{2}(end), num_fibers(2));
+    % fprintf('leg{3} = [%d:%d]; %%6mm offset (%d fibers)\n', leg_indices_mapped{3}(1), leg_indices_mapped{3}(end), num_fibers(3));
+    
+
+% Additional Visualization: Plot the Intensity Profile with Gaps
+
+% for i = 1:num_legs
+%     figure;
+%     imshow(legs{i}, []);
+%     title(['Leg ' num2str(i)]);
+% end
+
+% figure;
+% plot(row_profile_norm, 'LineWidth', 1.5);
+% hold on;
+% yline(low_intensity_threshold, 'r--', 'Low Intensity Threshold');
+% 
+% % Highlight gap regions
+% for i = 1:length(gap_starts)
+%     x = gap_starts(i):gap_ends(i);
+%     y = row_profile_norm(x);
+%     plot(x, y, 'r', 'LineWidth', 2);
+% end
+% 
+% xlabel('Row Index');
+% ylabel('Smoothed Normalized Intensity');
+% title('Row-wise Intensity Profile with Gaps Highlighted');
+% legend('Intensity Profile', 'Threshold', 'Gaps');
+% hold off;
+% 
+% % Optional: Display Leg Boundaries on Original Image
+% figure;
+% imshow(img_gray, []);
+% hold on;
+% for i = 1:num_legs
+%     rectangle('Position', [1, leg_starts(i), size(img_gray, 2)-1, leg_ends(i)-leg_starts(i)], 'EdgeColor', 'g', 'LineWidth', 2);
+% end
+% title('Leg Boundaries on Original Image');
+% hold off;
 
 
+% end of the legfindwer function
 
 
 
