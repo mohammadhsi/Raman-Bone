@@ -255,7 +255,7 @@ npeakstripwindow = 4;
 %typeakwavenum = [329.2 390.9 465.1 NaN NaN 651.6 710.8 797.2 NaN 857.9 NaN 1168.5 1236.8 NaN 1278.5 1329.9 1371.5 1561.6 NaN 1648.4 NaN].'; 
 
 % September 10 2024
-%typeakwavenum = [329.2          390.9            NaN            NaN          651.6          710.8     NaN     797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].';
+typeakwavenum = [329.2          390.9            NaN            NaN          651.6          710.8     NaN     797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4            NaN].';
 
 
 % October 4 2024
@@ -269,7 +269,7 @@ npeakstripwindow = 4;
 
 
 % Nov 22 2024
-typeakwavenum = [329.2          390.9          465.1            NaN            NaN          651.6          710.8            NaN          797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4].';
+%typeakwavenum = [329.2          390.9          465.1            NaN            NaN          651.6          710.8            NaN          797.2            NaN          857.9            NaN         1168.5         1236.8            NaN         1278.5         1329.9         1371.5         1561.6            NaN         1648.4].';
 
 typeaknum = length(typeakwavenum);
 typeakstripwindow = 15;
@@ -2479,88 +2479,124 @@ function isValid = isPeakValid(spectrum, xaxis, peakLoc, peakWidth, windowSize, 
     isValid = peakHeight >= peakWidth; % Adjust this condition based on your criteria
 
 
-function [leg_indices_mapped, num_fibers] = legFinder(image_name)
-% PROCESS_IMAGE Processes the image to distinguish between legs and counts fibers.
-%   [leg_indices_mapped, num_fibers] = PROCESS_IMAGE(image_name)
+function [leg_indices_mapped, num_fibers] = legFinder(image_input)
+% LEGFINDER Finds and segments exactly 3 legs from the image and counts fibers in each leg.
+%   [leg_indices_mapped, num_fibers] = LEGFINDER(image_input)
 %
 %   Inputs:
-%       image_name - String, the name of the image file (e.g., 'whitelamp.png')
+%       image_input - Either a string specifying the image file name (e.g., 'whitelamp.png')
+%                     or an image array (e.g., loaded using imread).
 %
 %   Outputs:
-%       leg_indices_mapped - Cell array containing row indices for each leg.
-%       num_fibers - Array containing the number of fibers in each leg.
+%       leg_indices_mapped - Cell array containing row indices for each of the 3 legs.
+%       num_fibers         - Array containing the number of fibers in each leg.
+%
+%   Throws:
+%       Error if the number of detected legs is not exactly 3.
 
-    % Step 1: Load and Preprocess the Image
-    % Load the image
-    img = image_name;
-    
+    %% Step 1: Load and Preprocess the Image
+    % Determine if input is a filename or an image array
+    if ischar(image_input) || isstring(image_input)
+        img = imread(image_input);
+    elseif ismatrix(image_input) || (ndims(image_input) == 3 && size(image_input,3) == 3)
+        img = image_input;
+    else
+        error('Invalid input: image_input must be a filename or an image array.');
+    end
+
     % Convert to grayscale if necessary
     if size(img, 3) == 3
         img_gray = rgb2gray(img);
     else
         img_gray = img;
     end
-    
-    % Optional: Apply median filtering to reduce noise
+
+    % Apply median filtering to reduce noise
     img_gray = medfilt2(img_gray, [3 3]);
-    
-    % Step 2: Compute the Row-wise Intensity Profile
-    row_profile = sum(img_gray, 2);
-    
-    % Step 3: Normalize the Intensity Profile
+
+    %% Step 2: Compute the Row-wise Intensity Profile
+    row_profile = sum(double(img_gray), 2);  % Ensure numeric precision
+
+    %% Step 3: Normalize the Intensity Profile
     row_profile_norm = row_profile / max(row_profile);
-    
-    % Step 4: Smooth the Intensity Profile (Optional)
-    %row_profile_smooth = smoothdata(row_profile_norm, 'gaussian', 5);
-    
-    % Step 5: Compute Low Intensity Threshold Based on Percentiles
+
+    %% Step 4: Determine Low Intensity Threshold
     low_intensity_threshold = prctile(row_profile_norm, 7);
-    
-    % Step 6: Identify Low-Intensity Indices
+
+    %% Step 5: Identify Low-Intensity Indices
     low_intensity_indices = find(row_profile_norm < low_intensity_threshold);
-    
-    % Step 7: Group Consecutive Low-Intensity Indices to Identify Gaps
+
+    %% Step 6: Group Consecutive Low-Intensity Indices to Identify Gaps
     diff_indices = diff(low_intensity_indices);
-    gap_starts = [low_intensity_indices(1); low_intensity_indices(find(diff_indices > 1) + 1)];
-    gap_ends = [low_intensity_indices(find(diff_indices > 1)); low_intensity_indices(end)];
+    gap_start_positions = find(diff_indices > 1) + 1;
+    gap_starts = low_intensity_indices([1; gap_start_positions]);
+    gap_ends = low_intensity_indices([gap_start_positions - 1; end]);
+
     gap_lengths = gap_ends - gap_starts + 1;
-    
-    % Step 8: Find Gaps Longer Than 5 Rows
-    significant_gaps = find(gap_lengths >= 5);
-    
-    % Step 9: Determine Leg Boundaries Based on Significant Gaps
+
+    %% Step 7: Select Only “Significant” Gaps (Length >= 5)
+    significant_gap_mask = gap_lengths >= 5;
+    significant_gaps = find(significant_gap_mask);
+
+    %% Step 8: Ignore Gaps Near Image Boundaries to Prevent False Legs
+    min_row = 5;                                   % Minimum row to consider
+    max_row = size(img_gray,1) - 5;                % Maximum row to consider
+
+    % Filter out significant gaps that are too close to the top or bottom
+    valid_gaps = [];
+    for i = 1:length(significant_gaps)
+        gs = gap_starts(significant_gaps(i));      % Gap start
+        ge = gap_ends(significant_gaps(i));        % Gap end
+        if gs >= min_row && ge <= max_row
+            valid_gaps(end+1) = significant_gaps(i); %#ok<AGROW>
+        end
+    end
+    significant_gaps = valid_gaps;
+
+    %% Step 9: Determine Leg Boundaries Based on Valid Significant Gaps
     leg_starts = [1; gap_ends(significant_gaps) + 1];
-    leg_ends = [gap_starts(significant_gaps) - 1; size(img_gray, 1)];
-    
-    % Ensure arrays are the same length
-    min_length = min(length(leg_starts), length(leg_ends));
-    leg_starts = leg_starts(1:min_length);
-    leg_ends = leg_ends(1:min_length);
-    
-    % Step 10: Extract Each Leg Based on Boundaries
-    num_legs = length(leg_starts);
-    legs = cell(num_legs, 1);
-    leg_indices = cell(num_legs, 1);
-    
-    for i = 1:num_legs
-        legs{i} = img_gray(leg_starts(i):leg_ends(i), :);
-        leg_indices{i} = leg_starts(i):leg_ends(i);
+    leg_ends   = [gap_starts(significant_gaps) - 1; size(img_gray, 1)];
+
+    %% Step 10: Remove Invalid Leg Segments (where leg_ends < leg_starts)
+    valid_segments = leg_ends >= leg_starts;
+    leg_starts = leg_starts(valid_segments);
+    leg_ends   = leg_ends(valid_segments);
+
+    %% Step 11: Convert to Cell Arrays of Indices
+    num_detected_legs = numel(leg_starts);
+    all_leg_indices = cell(num_detected_legs, 1);
+    for i = 1:num_detected_legs
+        all_leg_indices{i} = leg_starts(i):leg_ends(i);
     end
-    
-    % Adjust Leg Ordering to Match Specified Offsets
-    % Adjust the mapping based on your observations
-    leg_indices_mapped = cell(1,num_legs);
-    leg_indices_mapped{1} = leg_indices{2}; % Detected leg{2} is your leg{1}
-    leg_indices_mapped{2} = leg_indices{1}; % Detected leg{1} is your leg{2}
-    leg_indices_mapped{3} = leg_indices{3}; % Detected leg{3} is your leg{3}
-    
-    % Calculate the Number of Fibers in Each Leg
-    num_fibers = zeros(1,num_legs);
-    for i = 1:num_legs
-        % Calculate the number of fibers
-        % Adjust the calculation if fibers occupy more than one row
-        num_fibers(i) = floor(length(leg_indices_mapped{i})/5.5);
+
+    %% Step 12: Filter Out Legs That Are Too Small
+    total_height = size(img_gray,1);
+    min_leg_size = 0.05 * total_height;  % 5% of total height (adjust as needed)
+    big_enough_mask = cellfun(@(x) length(x) >= min_leg_size, all_leg_indices);
+    all_leg_indices = all_leg_indices(big_enough_mask);
+    num_detected_legs = numel(all_leg_indices);  % Update leg count after filtering
+
+    %% Step 13: Enforce Exactly 3 Legs
+    if num_detected_legs ~= 3
+        error('Detected %d legs instead of 3! Possible image misalignment.', num_detected_legs);
     end
+
+    %% Step 14: Map Legs to Desired Order
+    % Adjust the mapping based on your specific ordering requirements
+    % Example: if you need to reorder as in your original code (2-1-3)
+    leg_indices_mapped = cell(1,3);
+    leg_indices_mapped{1} = all_leg_indices{2}; % Detected leg{2} is your leg{1}
+    leg_indices_mapped{2} = all_leg_indices{1}; % Detected leg{1} is your leg{2}
+    leg_indices_mapped{3} = all_leg_indices{3}; % Detected leg{3} is your leg{3}
+
+    %% Step 15: Calculate the Number of Fibers in Each Leg
+    num_fibers = zeros(1,3);
+    for i = 1:3
+        % Example: each fiber takes ~5.5 rows
+        num_fibers(i) = floor(length(leg_indices_mapped{i}) / 5.5);
+    end
+
+
     
     % leg = cell(num_legs, 1);
     % leg{1} = [leg_indices_mapped{1}(1), leg_indices_mapped{1}(end)];
